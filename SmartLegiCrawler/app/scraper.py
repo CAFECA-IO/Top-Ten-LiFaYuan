@@ -1,31 +1,13 @@
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 import re
-from .utils import parse_meeting_date, setup_logger
+from .utils import parse_meeting_date, setup_logger, init_driver
 
 # 設置 logger
 logger = setup_logger('scraper', 'scraper.log')
 
-# 配置瀏覽器選項
-options = webdriver.ChromeOptions()
-options.add_argument('--headless')
-options.add_argument('--disable-gpu')
-options.add_argument('--no-sandbox')
-options.add_argument('start-maximized')
-options.add_argument('disable-infobars')
-options.add_argument('--disable-extensions')
-
-base_url = 'https://www.ly.gov.tw/Pages/MeetingList.aspx?nodeid=135'
-
-def init_driver():
-    """初始化瀏覽器驅動"""
-    return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-
 def get_url(page=None, start_date=None, end_date=None, q=None, committee=None):
     """生成會議列表的URL"""
-    url = base_url
+    url = 'https://www.ly.gov.tw/Pages/MeetingList.aspx?nodeid=135'
     params = []
 
     if page is not None:
@@ -50,6 +32,10 @@ def parse_meeting_element(date, meeting_element):
     """解析單個會議元素，提取會議信息"""
     meeting = {'date': date}
 
+    time_div = meeting_element.find('div', class_='room', string=lambda text: '時間' in text)
+    if time_div:
+        meeting['time'] = time_div.text.strip()
+
     committee_div = meeting_element.find('div', class_='room', attrs={'data-name': True})
     if committee_div:
         meeting['committee'] = committee_div.text.strip()
@@ -57,10 +43,6 @@ def parse_meeting_element(date, meeting_element):
     label_div = meeting_element.find('div', class_='label')
     if label_div:
         meeting['label'] = label_div.text.strip()
-
-    time_div = meeting_element.find('div', class_='room', string=lambda text: '時間' in text)
-    if time_div:
-        meeting['time'] = time_div.text.strip()
 
     location_div = meeting_element.find('div', class_='label', string=lambda text: '地點' in text)
     if location_div:
@@ -112,8 +94,10 @@ def scrape_meetings(start_date=None, end_date=None, page=None, q=None, committee
 
         # 檢查是否還有更多頁面
         pagination = soup.select_one('ul.pagination')
-        if not pagination:
-            break
+        if pagination is None:
+            driver.get(url)
+            soup = BeautifulSoup(driver.page_source, 'html.parser')
+            pagination = soup.select_one('ul.pagination')
         pagination_items = pagination.find_all('li')
         if not pagination_items:
             break

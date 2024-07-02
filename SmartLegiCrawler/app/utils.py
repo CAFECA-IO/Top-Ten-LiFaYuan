@@ -1,5 +1,7 @@
 import logging
-from datetime import datetime
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 
 # 配置日誌紀錄
 def setup_logger(name, log_file, level=logging.INFO):
@@ -31,22 +33,25 @@ def parse_meeting_date(date_element):
         return None
     
     year = date_element.find('b').text.strip()
-    month_day = date_element.find('strong').text.strip().replace("/", "")
+    month_day = date_element.find('strong').text.strip()
     if year and month_day:
         return f"{year}/{month_day}"
 
     return None
 
-# 檢查字符串是否包含特定文本
-def contains_text(element, text):
+# 初始化瀏覽器驅動
+def init_driver():
     """
-    檢查元素中是否包含特定文本
-    :param element: BeautifulSoup解析後的元素
-    :param text: 要檢查的文本
-    :return: 是否包含該文本文本的布尔值
+    配置瀏覽器選項
     """
-    if not element:
-        return False
-    return text in element.get_text()
+    options = webdriver.ChromeOptions()
+    options.add_argument('--headless')
+    options.add_argument('--disable-gpu')
+    options.add_argument('--no-sandbox')
+    options.add_argument('start-maximized')
+    options.add_argument('disable-infobars')
+    options.add_argument('--disable-extensions')
+
+    return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
 # 其他工具函数可以根据需要添加

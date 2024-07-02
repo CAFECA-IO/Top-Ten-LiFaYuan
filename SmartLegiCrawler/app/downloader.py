@@ -1,21 +1,10 @@
 import subprocess
 import os
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 import time
-from .utils import setup_logger
+from .utils import setup_logger, init_driver
 
 # 設置 logger
 logger = setup_logger('downloader', 'downloader.log')
-
-options = webdriver.ChromeOptions()
-options.add_argument('--headless')
-options.add_argument('--disable-gpu')
-options.add_argument('--no-sandbox')
-options.add_argument('start-maximized')
-options.add_argument('disable-infobars')
-options.add_argument('--disable-extensions')
 
 def download_video(m3u8_url, output_filename):
     command = [
@@ -38,7 +27,7 @@ def download_video(m3u8_url, output_filename):
         logger.error(f"錯誤：{e}")
 
 def get_video_source(url):
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    driver = init_driver()
     driver.get(url)
     time.sleep(10)
     filelink = driver.execute_script("return _filelink;")

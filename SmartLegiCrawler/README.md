@@ -5,11 +5,10 @@ Smart Legi Crawler 是一個網頁爬蟲專案，設計用於從台灣立法院�
 ## 專案結構
 
 ```bash
-TaiwanLegislativeVideoDownloader/
+SmartLegiCrawler/
 │
 ├── app/
 │   ├── __init__.py       # 初始化 Flask 應用
-│   ├── main.py           # 主程序入口
 │   ├── routes.py         # 定義 API 路由
 │   ├── scraper.py        # 網頁爬取邏輯
 │   ├── downloader.py     # 視頻下載邏輯
@@ -20,7 +19,10 @@ TaiwanLegislativeVideoDownloader/
 ├── requirements.txt      # 專案依賴
 │
 ├── run.py                # 啟動應用
-└── readme.md             # 專案說明文件
+├── readme.md             # 專案說明文件
+├── downloads/            # 下載的視頻
+│
+└── .gitignore            # Git 忽略文件
 ```
 
 ## 安裝與使用
@@ -28,7 +30,6 @@ TaiwanLegislativeVideoDownloader/
 ### 1. 克隆此專案
 
 ```bash
-Copy code
 git clone https://github.com/CAFECA-IO/Top-Ten-LiFaYuan.git
 cd Top-Ten-LiFaYuan/SmartLegiCrawler
 ```

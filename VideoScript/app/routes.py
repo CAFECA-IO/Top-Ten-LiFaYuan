@@ -3,7 +3,7 @@ import os
 import threading
 from . import app
 from .downloader import download_video, get_video_source
-from .audio_extractor import convert_video_to_audio
+from .audio_extractor import extract_audio
 from .speech_to_text import transcribe_audio
 from .utils import setup_logger
 
@@ -55,7 +55,7 @@ def transcribe_video():
     # 檢查音頻文件是否存在
     if not os.path.exists(audio_path):
         logger.info(f"Converting video from {video_path} to {audio_path}")
-        convert_video_to_audio(video_path, audio_path)
+        extract_audio(video_path, audio_path)
 
         if not os.path.exists(audio_path):
             logger.error(f"Failed to convert video from {video_path} to {audio_path}")

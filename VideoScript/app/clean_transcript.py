@@ -1,7 +1,7 @@
 import os
+import re
 import spacy
 from transformers import pipeline
-import re
 
 # 加載 Spacy 中文模型
 nlp = spacy.load("zh_core_web_sm")
@@ -48,13 +48,10 @@ corrections = {
     "藍氣": "燃氣",
     "經典打算": "經濟部打算",
     "劉書瑋": "劉書偉",
-    "郭高楊": "郭高雄",
     "來捷務": "來自捷運",
     "陳政祺": "陳政祺",
     "李潔文": "李潔雯",
     "哇斯轉男女青": "瓦斯轉燃氣",
-    "白皮書": "白皮書",
-    "基於什麼樣子的原因": "基於什麼原因",
     "元政策": "能源政策",
     "入境": "路徑",
     "變遷的委員會": "變遷委員會",
@@ -84,37 +81,109 @@ def correct_text(text):
     for wrong, right in corrections.items():
         text = text.replace(wrong, right)
 
-    # 使用 BERT 模型進行上下文感知的修正
-    tokens = text.split()
-    for i, token in enumerate(tokens):
-        if '[MASK]' in token:
-            masked_text = text.replace(token, '[MASK]')
+    return text
+
+def contextual_correction(text):
+    """
+    使用 BERT 模型進行上下文感知的修正。
+    """
+    corrected_text = ""
+    for token in text.split():
+        if "[MASK]" in token:
+            masked_text = text.replace(token, "[MASK]")
             predictions = corrector(masked_text)
-            tokens[i] = predictions[0]['token_str']
-    corrected_text = ' '.join(tokens)
-    
+            corrected_text += predictions[0]['token_str']
+        else:
+            corrected_text += token
     return corrected_text
+
+def protect_decimals(text):
+    """
+    使用特殊標記保護小數點。
+    """
+    return re.sub(r'(\d+)\.(\d+)', r'\1<SPLIT>\2', text)
+
+def restore_decimals(text):
+    """
+    恢復被保護的小數點。
+    """
+    return text.replace('<SPLIT>', '.')
+
+def add_punctuation_and_newlines(text):
+    """
+    添加標點符號和換行符。
+    """
+    # 使用 Spacy 進行分詞和句子分割
+    doc = nlp(text)
+    
+    # 初始化結果文本
+    result = []
+    
+    # 遍歷每個句子
+    for sent in doc.sents:
+        sentence = sent.text.strip()
+        if sentence:
+            # 如果句子結尾沒有標點符號，則添加句號
+            if not re.search(r'[。！？]', sentence[-1]):
+                sentence += '。'
+            result.append(sentence)
+    
+    # 使用換行符連接每個句子
+    return '\n'.join(result)
+
+def split_long_sentences(text, max_length=50):
+    """
+    將過長的句子分割為更短的句子。
+    """
+    sentences = text.split('\n')
+    result = []
+
+    for sentence in sentences:
+        if len(sentence) <= max_length:
+            result.append(sentence)
+        else:
+            parts = []
+            temp_part = ''
+            for char in sentence:
+                temp_part += char
+                if len(temp_part) >= max_length and char in '，。！？；':
+                    parts.append(temp_part.strip())
+                    temp_part = ''
+            if temp_part:
+                parts.append(temp_part.strip())
+            result.extend(parts)
+    
+    return '\n'.join(result)
 
 def clean_transcript(transcript):
     """
     清理逐字稿文本，包括修正錯別字和專有名詞，添加標點符號等。
     """
+    # 保護小數點
+    transcript = protect_decimals(transcript)
+
+    # 初步修正
     transcript = correct_text(transcript)
 
-    # 使用 Spacy 進行分詞和命名實體識別
-    doc = nlp(transcript)
+    # 使用 BERT 進行上下文感知的修正
+    transcript = contextual_correction(transcript)
 
-    # 添加標點符號
-    transcript = re.sub(r"([。！？])", r"\1\n", transcript)  # 將句號、驚嘆號和問號後添加換行符
-    transcript = re.sub(r"([，])", r"\1 ", transcript)  # 在逗號後添加空格
+    # 添加標點符號和換行符
+    transcript = add_punctuation_and_newlines(transcript)
+
+    # 分割過長的句子
+    transcript = split_long_sentences(transcript)
+
+    # 恢復小數點
+    transcript = restore_decimals(transcript)
 
     return transcript
 
 if __name__ == "__main__":
     # 示例逐字稿文件
-    video_id = "154397"  # 假設這是視頻的ID
-    version = "v2"
-    transcript_filename = f'meeting_script_{video_id}_{version}.txt'
+    video_id = "154397" # 視頻 ID
+    version = "v5"
+    transcript_filename = f'meeting_script_{video_id}.txt'
     transcript_path = os.path.join('scripts', transcript_filename)
 
     # 讀取逐字稿文本
@@ -125,7 +194,7 @@ if __name__ == "__main__":
     cleaned_transcript = clean_transcript(example_transcript)
 
     # 儲存清理後的逐字稿
-    cleaned_transcript_filename = f'cleaned_meeting_script_{video_id}.txt'
+    cleaned_transcript_filename = f'cleaned_meeting_script_{video_id}_{version}.txt'
     cleaned_transcript_path = os.path.join('scripts', cleaned_transcript_filename)
 
     with open(cleaned_transcript_path, 'w', encoding='utf-8') as file:

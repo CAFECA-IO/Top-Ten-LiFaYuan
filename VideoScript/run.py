@@ -29,6 +29,7 @@ if __name__ == '__main__':
 
     if len(sys.argv) > 1:
         if 'download' in sys.argv:
+            print(f"Downloading video from {video_url}")
             video_path = os.path.join('downloads', f'downloaded_meeting_{video_id}.mp4')
             m3u8_url = get_video_source(video_url)
             if not m3u8_url:
@@ -59,10 +60,10 @@ if __name__ == '__main__':
             processed_audio_path = os.path.join('audios', f'processed_audio_{video_id}.wav')
             transcript_path = os.path.join('scripts', f'meeting_script_{video_id}.txt')
             print(f"Transcribing audio from {processed_audio_path} to {transcript_path}")
-            transcribe_audio(processed_audio_path, transcript_path)
+            transcribe_audio(processed_audio_path, transcript_path, model_name="base", device="cuda", language="zh")
 
         if 'optimize' in sys.argv:
-            transcript_path = os.path.join('scripts', f'segments_processed_audio_{video_id}.json')
+            transcript_path = os.path.join('scripts', f'meeting_script_{video_id}.json')
             optimized_path = os.path.join('scripts', f'optimized_script{video_id}.json')
             token = os.getenv("HUGGINGFACE_API_TOKEN")
             optimized_transcriptions = optimize_transcription(transcript_path, optimized_path, model_name="taide/Llama3-TAIDE-LX-8B-Chat-Alpha1", token=token)

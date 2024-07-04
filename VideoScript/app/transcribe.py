@@ -12,7 +12,7 @@ from .utils import setup_logger, save_to_file
 # 設置 logger
 logger = setup_logger('transcribe', 'transcribe.log')
 
-def transcribe_audio(audio_path, model_name="base", device="cpu", language="zh"):
+def transcribe_audio(audio_path, output_path, model_name="base", device="cpu", language="zh"):
     start_time = time.time()
     logger.info(f"Loading model: {model_name} on device: {device}")
 
@@ -42,8 +42,7 @@ def transcribe_audio(audio_path, model_name="base", device="cpu", language="zh")
     
     segments = result["segments"]  # 包含不同人發言的時間段信息和文本
 
-    filename = os.path.basename(audio_path).strip('.wav')
-    save_to_file(segments, os.path.join('scripts', f'segments_{filename}.json'))
+    save_to_file(segments, output_path)
     return segments
 
 

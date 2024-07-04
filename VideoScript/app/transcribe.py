@@ -11,7 +11,7 @@ import torch
 # 設置 logger
 logger = setup_logger('transcribe', 'transcribe.log')
 
-def transcribe_audio(audio_path, output_path, model_name="base", device="cpu", language="zh", diarization_model="inaSpeechSegmenter"):
+def transcribe_audio(audio_path, output_path, model_name="base", language="zh", diarization_model="inaSpeechSegmenter"):
     start_time = time.time()
     logger.info(f"Loading model: {model_name} on device: {device}")
 

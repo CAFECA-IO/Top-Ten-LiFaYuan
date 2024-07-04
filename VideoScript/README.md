@@ -48,11 +48,12 @@ pip install -r requirements.txt
 
 ### 4. 生成 Hugging Face API Token
 
-1. 登錄到 [Hugging Face](https://huggingface.co/settings/tokens)。
-2. 選擇 "New token"，類型選擇 "Fine-grained (custom)"。
-3. 生成後複製該 token。
-4. 點擊 "Edit Access Token Permissions"，在 "Repositories permissions" 裡面搜尋 `taide/Llama3-TAIDE-LX-8B-Chat-Alpha1`，然後勾選 "Read access to contents of selected repos"。
-5. 回到本地端，通過 `huggingface-cli login` 貼上先前複製的 token，並選擇 "Add token as git credential? (Y/n)" 回答 "Y"。
+1. 確保接受模型使用條款，訪問 [taide/Llama3-TAIDE-LX-8B-Chat-Alpha1 模型頁面](https://huggingface.co/taide/Llama3-TAIDE-LX-8B-Chat-Alpha1)，並接受使用條款。
+2. 登錄到 [Hugging Face](https://huggingface.co/settings/tokens)。
+3. 選擇 "New token"，類型選擇 "Fine-grained (custom)"。
+4. 生成後複製該 token。
+5. 點擊 "Edit Access Token Permissions"，在 "Repositories permissions" 裡面搜尋 `taide/Llama3-TAIDE-LX-8B-Chat-Alpha1`，然後勾選 "Read access to contents of selected repos"。
+6. 回到本地端，通過 `huggingface-cli login` 貼上先前複製的 token，並選擇 "Add token as git credential? (Y/n)" 回答 "Y"。
 
 ### 5. 環境變量配置
 
@@ -115,17 +116,77 @@ TranscriptionProject/
 
 ## 啟動應用
 
-使用以下命令啟動 Flask 應用：
+要啟動 Flask 應用，請按照以下步驟進行：
+
+### 1. 準備工作
+
+確保您已經完成了環境配置部分的所有步驟，包括建立 Python 虛擬環境、安裝必要的套件、安裝 FFmpeg、生成 Hugging Face API Token 以及配置環境變量。
+
+### 2. 下載視頻
+
+要下載會議視頻，請運行以下命令：
+
+目前下載的視頻網址是寫死的，還未提供接口。
+
+```bash
+python run.py download
+```
+
+這將下載指定的會議視頻並將其保存到 `downloads` 目錄中。
+
+### 3. 提取音頻
+
+從下載的視頻中提取音頻，請運行以下命令：
+
+```bash
+python run.py extract
+```
+
+這將提取視頻中的音頻並將其保存到 `audios` 目錄中。
+
+### 4. 處理音頻
+
+要對提取的音頻進行處理（如降噪），請運行以下命令：
+
+```bash
+python run.py process
+```
+
+這將處理音頻並將結果保存到 `audios` 目錄中。
+
+### 5. 轉換音頻為逐字稿
+
+要將處理過的音頻轉換為逐字稿，請運行以下命令：
+
+```bash
+python run.py transcribe
+```
+
+這將生成逐字稿並將其保存到 `scripts` 目錄中。
+
+### 6. 優化逐字稿
+
+使用 Llama3-TAIDE 模型來優化生成的逐字稿，請運行以下命令：
+
+```bash
+python run.py optimize
+```
+
+這將優化逐字稿並將結果保存到 `scripts` 目錄中。
+
+### 7. 啟動 Flask 應用
+
+如果您希望啟動完整的 Flask 應用來提供 API 服務，可以運行以下命令：
 
 ```bash
 python run.py
 ```
 
-## 使用說明
+這將啟動 Flask 應用，您可以通過 `http://localhost:5000` 訪問應用並使用其提供的 API。
 
-這個應用提供了一個 API 來下載會議視頻、轉換音頻並生成逐字稿。
+### 8. 使用 API
 
-### 1. 轉換視頻為逐字稿
+應用提供了一個 API 來下載會議視頻、轉換音頻並生成逐字稿。以下是一個示例請求來轉換視頻為逐字稿：
 
 **URL**: `/api/transcribe`
 
@@ -153,19 +214,7 @@ curl -X POST http://localhost:5000/api/transcribe -H "Content-Type: application/
 }
 ```
 
-### API 邏輯
-
-當 API 被調用時，會執行以下步驟：
-
-1. 檢查視頻是否已經存在於 `downloads` 目錄中。
-2. 如果視頻不存在，從提供的 URL 下載視頻。
-3. 檢查音頻是否已經存在於 `audios` 目錄中。
-4. 如果音頻不存在，從視頻中提取音頻並保存。
-5. 檢查逐字稿是否已經存在於 `scripts` 目錄中。
-6. 如果逐字稿不存在，轉錄音頻並保存逐字稿。
-7. 返回轉換成功的消息。
-
-感謝您的指正，以下是整合了 `pip install --no-user -r requirements.txt` 命令的完整步驟，用於在 TWCC 容器中配置並運行您的專案。
+這樣，您就可以通過 Flask 應用的 API 來自動化下載、提取、處理和轉換視頻為逐字稿的整個過程。
 
 ## 在 TWCC 容器中配置並運行專案
 
@@ -257,20 +306,6 @@ sudo apt-get install -y ffmpeg
 ```bash
 source venv/bin/activate
 python run.py download
-```
-
-根據錯誤信息，`pipeline` 變量是 `None`，這表示在初始化 `pyannote/speaker-diarization` pipeline 時出現了問題。這可能是因為沒有正確設置 Hugging Face 訪問令牌或沒有接受模型的使用條款。
-
-### 1. 確保接受模型使用條款
-
-首先，訪問 [pyannote/speaker-diarization 模型頁面](https://hf.co/pyannote/speaker-diarization)，並接受使用條款。
-
-### 2. 設置 Hugging Face 訪問令牌
-
-確保您已經創建了 Hugging Face 訪問令牌，並將其設置為環境變量：
-
-```bash
-export HUGGINGFACE_API_TOKEN=your_hugging_face_token
 ```
 
 ### ！目前 chrome 安裝失敗

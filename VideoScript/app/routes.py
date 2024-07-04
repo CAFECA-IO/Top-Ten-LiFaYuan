@@ -88,7 +88,7 @@ def transcribe_video():
     # 檢查逐字稿文件是否存在
     if not os.path.exists(transcript_path):
         logger.info(f"Transcribing audio from {audio_path} to {transcript_path}")
-        transcribe_audio(audio_path, transcript_path, model_name="base", device="cuda", language="zh")
+        transcribe_audio(audio_path, transcript_path, model_name="base", language="zh")
         
         if not os.path.exists(transcript_path):
             logger.error(f"Failed to transcribe audio from {audio_path} to {transcript_path}")

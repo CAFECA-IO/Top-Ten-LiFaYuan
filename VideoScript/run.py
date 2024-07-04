@@ -32,6 +32,6 @@ if __name__ == '__main__':
         print(f"Transcribing audio from {processed_audio_path}...")
         # token = os.getenv("HUGGINGFACE_API_TOKEN")
         token = "hf_lelTLeNngVvrKPcXVEqSkXxiOfjjMEAmCcz"
-        transcribe_and_optimize_audio(processed_audio_path, transcript_path, token=token)
+        transcribe_and_optimize_audio(processed_audio_path, transcript_path, model_name="base", device="cpu", optimize_model="taide/Llama3-TAIDE-LX-8B-Chat-Alpha1", language="zh", token=token)
     else:
         app.run(debug=True)

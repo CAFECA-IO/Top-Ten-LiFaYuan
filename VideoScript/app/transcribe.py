@@ -1,5 +1,6 @@
 # app/transcribe.py
 
+import os
 import time
 import whisperx
 from .optimize import optimize_transcription
@@ -8,27 +9,48 @@ from .utils import setup_logger, save_to_file
 # from pydub import AudioSegment
 # import speech_recognition as sr
 
-
 # 設置 logger
 logger = setup_logger('transcribe', 'transcribe.log')
 
 def transcribe_audio(audio_path, model_name="base", device="cpu", language="zh"):
     start_time = time.time()
     logger.info(f"Loading model: {model_name} on device: {device}")
-    model = whisperx.load_model(model_name, device=device, compute_type="float32")
+
+    # 設置 ASR 選項
+    asr_options = {
+        'max_new_tokens': 1024,
+        'clip_timestamps': True,
+        'hallucination_silence_threshold': 0.1,
+        'hotwords': None
+    }
+
+    # 加載模型，傳遞正確的參數
+    model = whisperx.load_model(
+        whisper_arch=model_name,
+        device=device,
+        compute_type="float32",
+        asr_options=asr_options,
+        language=language,
+        threads=4
+    )
+    
     logger.info(f"Model loaded successfully. Time taken: {time.time() - start_time} seconds")
     
     start_time = time.time()
-    result = model.transcribe(audio_path, language=language)
+    result = model.transcribe(audio_path)
     logger.info(f"Transcription completed. Time taken: {time.time() - start_time} seconds")
     
     segments = result["segments"]  # 包含不同人發言的時間段信息和文本
+
+    filename = os.path.basename(audio_path).strip('.wav')
+    save_to_file(segments, os.path.join('scripts', f'segments_{filename}.json'))
     return segments
 
 
-def transcribe_and_optimize_audio(audio_path, transcript_path, model_name="base", device="cpu", optimize_model="TAIDE-LX-8B-Chat-Alpha1", token=None):
+
+def transcribe_and_optimize_audio(audio_path, transcript_path, model_name="base", device="cpu", optimize_model="taide/Llama3-TAIDE-LX-8B-Chat-Alpha1", language="zh", token=None):
     print("Transcribing audio...")
-    segments = transcribe_audio(audio_path, model_name, device)
+    segments = transcribe_audio(audio_path=audio_path, model_name=model_name, device=device, language=language)
     
     print("Optimizing transcription...")
     optimized_transcriptions = optimize_transcription(segments, model_name=optimize_model, token=token)

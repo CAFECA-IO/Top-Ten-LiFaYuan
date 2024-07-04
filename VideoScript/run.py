@@ -68,12 +68,5 @@ if __name__ == '__main__':
             token = os.getenv("HUGGINGFACE_API_TOKEN")
             optimized_transcriptions = optimize_transcription(transcript_path, optimized_path, model_name="taide/Llama3-TAIDE-LX-8B-Chat-Alpha1", token=token)
             
-        video_id = "154397"
-        version = "v2"
-        transcript_path = os.path.join('scripts', f'segments_processed_audio_{video_id}_{version}.json')
-        optimized_path = os.path.join('scripts', f'optimized_script{video_id}.json')
-        token = os.getenv("HUGGINGFACE_API_TOKEN")
-        optimized_transcriptions = optimize_transcription(transcript_path, optimized_path, model_name="taide/Llama3-TAIDE-LX-8B-Chat-Alpha1", token=token)
-
     else:
         app.run(debug=True)

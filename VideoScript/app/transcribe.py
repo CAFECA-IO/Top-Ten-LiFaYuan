@@ -1,42 +1,86 @@
 # app/transcribe.py
 
+import os
 import time
 import whisperx
-from .optimize import optimize_transcription
+from inaSpeechSegmenter import Segmenter
+from pyannote.audio import Pipeline
 from .utils import setup_logger, save_to_file
-# import whisper
-# from pydub import AudioSegment
-# import speech_recognition as sr
-
+import torch
 
 # 設置 logger
 logger = setup_logger('transcribe', 'transcribe.log')
 
-def transcribe_audio(audio_path, model_name="base", device="cpu", language="zh"):
+def transcribe_audio(audio_path, output_path, model_name="base", device="cpu", language="zh", diarization_model="inaSpeechSegmenter"):
     start_time = time.time()
     logger.info(f"Loading model: {model_name} on device: {device}")
-    model = whisperx.load_model(model_name, device=device, compute_type="float32")
+
+    # 設置 ASR 選項
+    asr_options = {
+        'max_new_tokens': 1024,
+        'clip_timestamps': True,
+        'hallucination_silence_threshold': 0.1,
+        'hotwords': None
+    }
+
+    # 確認 CUDA 設置
+    if torch.cuda.is_available() and device == "cuda":
+        device = torch.device("cuda")
+    else:
+        device = torch.device("cpu")
+    logger.info(f"Using device: {device}")
+
+    # 加載模型，傳遞正確的參數
+    model = whisperx.load_model(
+        whisper_arch=model_name,
+        device=device.type,
+        compute_type="float32",
+        asr_options=asr_options,
+        language=language,
+        threads=4
+    )
     logger.info(f"Model loaded successfully. Time taken: {time.time() - start_time} seconds")
     
+    # 轉錄
     start_time = time.time()
     result = model.transcribe(audio_path, language=language)
     logger.info(f"Transcription completed. Time taken: {time.time() - start_time} seconds")
     
     segments = result["segments"]  # 包含不同人發言的時間段信息和文本
+
+    # 說話者辨識
+    start_time = time.time()
+    try:
+        if diarization_model == "inaSpeechSegmenter":
+            segmenter = Segmenter()
+            segmentation = segmenter(audio_path)
+            speaker_segments = [(float(start), float(end), label) for start, end, label in segmentation if label not in ('noEnergy', 'noise')]
+        elif diarization_model == "pyannote":
+            huggingface_token = os.getenv("HUGGINGFACE_API_TOKEN")
+            pipeline = Pipeline.from_pretrained("pyannote/speaker-diarization", use_auth_token=huggingface_token)
+            pipeline.to(device)
+            diarization = pipeline(audio_path)
+            speaker_segments = [(turn.start, turn.end, speaker) for turn, _, speaker in diarization.itertracks(yield_label=True)]
+        else:
+            raise ValueError(f"Unsupported diarization model: {diarization_model}")
+        logger.info(f"Speaker diarization completed using {diarization_model}. Time taken: {time.time() - start_time} seconds")
+    except Exception as e:
+        print(f"Error during speaker diarization: {e}")
+        return
+    
+    # 合併分割信息和轉錄信息
+    for segment in segments:
+        segment["speaker"] = "unknown"
+        for start, end, label in speaker_segments:
+            try:
+                if start <= segment["start"] <= end or start <= segment["end"] <= end:
+                    segment["speaker"] = label
+                    break
+            except ValueError:
+                continue  # 跳過無法轉換為浮點數的標籤
+    
+    save_to_file(segments, output_path)
     return segments
-
-
-def transcribe_and_optimize_audio(audio_path, transcript_path, model_name="base", device="cpu", optimize_model="TAIDE-LX-8B-Chat-Alpha1", token=None):
-    print("Transcribing audio...")
-    segments = transcribe_audio(audio_path, model_name, device)
-    
-    print("Optimizing transcription...")
-    optimized_transcriptions = optimize_transcription(segments, model_name=optimize_model, token=token)
-    
-    print("Saving to file...")
-    save_to_file(optimized_transcriptions, transcript_path)
-    
-    print(f"Transcription saved to {transcript_path}")
 
 """
 def transcribe_audio_by_whisper(audio_path, transcript_path):

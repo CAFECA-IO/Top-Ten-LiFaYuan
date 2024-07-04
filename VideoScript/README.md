@@ -2,7 +2,7 @@
 
 ## 簡介
 
-這個專案提供了一個基於 Flask 的網頁應用，用於下載會議視頻並將其轉換為逐字稿。通過使用 `ffmpeg` 提取音頻，並利用 OpenAI Whisper 進行語音轉文字。
+這個專案提供了一個基於 Flask 的網頁應用，用於下載會議視頻並將其轉換為逐字稿。通過使用 `ffmpeg` 提取音頻，利用 Whisperx 切分不同發言人的逐字稿，再使用財團法人國家實驗研究院（以下稱「國研院」）開發並建置的 Llama3-TAIDE 模型來優化逐字稿。
 
 ## 環境配置
 
@@ -46,33 +46,71 @@ pip install -r requirements.txt
   sudo apt install ffmpeg
   ```
 
+### 4. 生成 Hugging Face API Token
+
+1. 登錄到 [Hugging Face](https://huggingface.co/settings/tokens)。
+2. 選擇 "New token"，類型選擇 "Fine-grained (custom)"。
+3. 生成後複製該 token。
+4. 點擊 "Edit Access Token Permissions"，在 "Repositories permissions" 裡面搜尋 `taide/Llama3-TAIDE-LX-8B-Chat-Alpha1`，然後勾選 "Read access to contents of selected repos"。
+5. 回到本地端，通過 `huggingface-cli login` 貼上先前複製的 token，並選擇 "Add token as git credential? (Y/n)" 回答 "Y"。
+
+### 5. 環境變量配置
+
+為了安全地管理環境變量，例如 Hugging Face API Token，您可以使用 `.env` 文件。
+
+#### 1. 創建 `.env` 文件
+
+在專案目錄中創建一個名為 `.env` 的文件，並添加以下內容：
+
+```bash
+HUGGINGFACE_API_TOKEN=您的 Hugging Face API Token
+```
+
+#### 2. 加載 `.env` 文件
+
+在代碼中使用 `python-dotenv` 庫來加載 `.env` 文件中的環境變量。
+
+在您的代碼中添加以下內容：
+
+```python
+from dotenv import load_dotenv
+import os
+
+# 加載 .env 文件
+load_dotenv()
+
+# 獲取 API Token
+token = os.getenv("HUGGINGFACE_API_TOKEN")
+```
+
 ## 項目結構
 
 ```plaintext
 TranscriptionProject/
 │
 ├── app/
-│   ├── __init__.py       # 初始化 Flask 應用
-│   ├── routes.py         # 定義 API 路由
-│   ├── downloader.py     # 視頻下載邏輯
-│   ├── audio_extractor.py # 音頻提取邏輯
-│   ├── speech_to_text.py  # 語音轉文字邏輯
-│   ├── utils.py          # 工具函數
+│   ├── __init__.py         # 初始化 Flask 應用
+│   ├── routes.py           # 定義 API 路由
+│   ├── downloader.py       # 視頻下載邏輯
+│   ├── audio_extractor.py  # 音頻提取邏輯
+│   ├── transcribe.py       # 語音轉文字邏輯
+│   ├── optimize.py         # 逐字稿優化邏輯
+│   ├── utils.py            # 工具函數
 │
-├── downloads/            # 下載的視頻
+├── downloads/              # 下載的視頻
 │
-├── audios/               # 轉換的音頻
+├── audios/                 # 轉換的音頻
 │
-├── scripts/              # 生成的逐字稿
+├── scripts/                # 生成的逐字稿
 │
-├── venv/                 # 虛擬環境
+├── venv/                   # 虛擬環境
 │
-├── requirements.txt      # 專案依賴
+├── requirements.txt        # 專案依賴
 │
-├── run.py                # 啟動應用
-├── readme.md             # 專案說明文件
+├── run.py                  # 啟動應用
+├── readme.md               # 專案說明文件
 │
-└── .gitignore            # Git 忽略文件
+└── .gitignore              # Git 忽略文件
 ```
 
 ## 啟動應用

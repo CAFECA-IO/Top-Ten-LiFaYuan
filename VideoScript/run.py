@@ -36,9 +36,12 @@ if __name__ == '__main__':
         transcribe_and_optimize_audio(processed_audio_path, transcript_path, model_name="base", device="cpu", optimize_model="taide/Llama3-TAIDE-LX-8B-Chat-Alpha1", language="zh", token=token)
 
     elif len(sys.argv) > 1 and 'optimize' in sys.argv:
-        filename = "segments_processed_audio_154397_v2.json"
+        video_id = "154397"
+        version = "v2"
+        transcript_path = os.path.join('scripts', f'segments_processed_audio_{video_id}_{version}.json')
+        optimized_path = os.path.join('scripts', f'optimized_script{video_id}.json')
         token = os.getenv("HUGGINGFACE_API_TOKEN")
-        optimized_transcriptions = optimize_transcription(filename, model_name="taide/Llama3-TAIDE-LX-8B-Chat-Alpha1", token=token)
+        optimized_transcriptions = optimize_transcription(transcript_path, optimized_path, model_name="taide/Llama3-TAIDE-LX-8B-Chat-Alpha1", token=token)
 
     else:
         app.run(debug=True)

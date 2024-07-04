@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
         if 'transcribe' in sys.argv:
             processed_audio_path = os.path.join('audios', f'processed_audio_{video_id}.wav')
-            transcript_path = os.path.join('scripts', f'meeting_script_{video_id}.txt')
+            transcript_path = os.path.join('scripts', f'meeting_script_{video_id}.json')
             print(f"Transcribing audio from {processed_audio_path} to {transcript_path}")
             transcribe_audio(processed_audio_path, transcript_path, model_name="base", device="cuda", language="zh")
 

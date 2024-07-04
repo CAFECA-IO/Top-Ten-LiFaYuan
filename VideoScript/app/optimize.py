@@ -24,7 +24,7 @@ def optimize_transcription(transcript_path, optimized_path, model_name="taide/Ll
         outputs = model.generate(**inputs, **generation_config)
         optimized_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
         optimized_transcriptions.append({
-            "speaker": segment["speaker"],
+            # "speaker": segment["speaker"],
             "start": segment["start"],
             "end": segment["end"],
             "text": optimized_text

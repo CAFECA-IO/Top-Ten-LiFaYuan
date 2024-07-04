@@ -165,6 +165,100 @@ curl -X POST http://localhost:5000/api/transcribe -H "Content-Type: application/
 6. 如果逐字稿不存在，轉錄音頻並保存逐字稿。
 7. 返回轉換成功的消息。
 
+感謝您的指正，以下是整合了 `pip install --no-user -r requirements.txt` 命令的完整步驟，用於在 TWCC 容器中配置並運行您的專案。
+
+## 在 TWCC 容器中配置並運行專案
+
+### 1. 更新包管理器和安裝必要的工具
+
+首先，確保管理器是最新的，並安裝 `python3-venv` 和 `wget`：
+
+```bash
+sudo apt-get update
+sudo apt-get install -y python3-venv wget
+```
+
+### 2. 創建虛擬環境
+
+創建並激活 Python 虛擬環境：
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 3. 安裝依賴
+
+在虛擬環境中安裝所需的 Python 包：
+
+#### 確保 include-system-site-packages 設置為 false
+
+首先，檢查並確保 venv/pyvenv.cfg 文件中的 include-system-site-packages 設置為 false，以確保虛擬環境不使用系統的 site-packages：
+
+```bash
+Copy code
+nano venv/pyvenv.cfg
+```
+
+確保文件中的 include-system-site-packages 設置為 false：
+
+```plaintext
+include-system-site-packages = false
+```
+
+保存更改並退出編輯器。
+
+```bash
+pip install --no-user --upgrade pip
+pip install --no-user -r requirements.txt
+```
+
+### 4. 安裝 Google Chrome 和 ChromeDriver
+
+創建一個臨時目錄來下載並安裝 Google Chrome：
+
+```bash
+mkdir -p ~/tmp_download && cd ~/tmp_download
+
+# 下載 Google Chrome 安裝包
+wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+
+# 修改文件權限
+chmod 644 google-chrome-stable_current_amd64.deb
+
+# 安裝 Google Chrome
+sudo apt install ./google-chrome-stable_current_amd64.deb
+
+# 清理臨時目錄
+cd ~
+rm -rf ~/tmp_download
+```
+
+### 5. 安裝 ChromeDriver 和其他必要依賴
+
+在虛擬環境中安裝 `selenium` 和 `webdriver-manager`，並確保 ChromeDriver 能夠自動下載和安裝：
+
+```bash
+pip install selenium webdriver-manager
+```
+
+### 7. 確保 FFmpeg 安裝正確
+
+安裝 FFmpeg：
+
+```bash
+sudo apt-get install -y ffmpeg
+```
+
+### 8. 運行應用
+
+激活虛擬環境並運行您的應用：
+
+```bash
+source venv/bin/activate
+python run.py download
+```
+
 ## 開發與貢獻
 
 鄉民玩 AI 系列基於取之於鄉民，用之於鄉民的精神，全系列進行 [CC0](https://ti-wb.github.io/creativecommon-tw/cc0.html) 「公眾領域貢獻宣告 」，歡迎所有讀者自由使用，也歡迎透過 GitHub 與我們一同協作，或是提交 Issues 給予我們建議。

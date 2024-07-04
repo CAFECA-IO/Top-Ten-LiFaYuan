@@ -1,1 +1,134 @@
 # Video Script
+
+## 簡介
+
+這個專案提供了一個基於 Flask 的網頁應用，用於下載會議視頻並將其轉換為逐字稿。通過使用 `ffmpeg` 提取音頻，並利用 OpenAI Whisper 進行語音轉文字。
+
+## 環境配置
+
+### 1. 建立 Python 虛擬環境
+
+確保你已安裝 Python 3。然後，使用以下命令來建立虛擬環境並啟動它：
+
+```bash
+python3 -m venv venv
+source venv/bin/activate  # MacOS/Linux
+venv\Scripts\activate     # Windows
+```
+
+### 2. 安裝必要的套件
+
+在虛擬環境中安裝所需的 Python 套件：
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3. 安裝 FFmpeg
+
+根據你的操作系統安裝 FFmpeg：
+
+- **MacOS**：
+
+  ```bash
+  brew install ffmpeg
+  ```
+
+- **Windows**：
+  - 從 [FFmpeg 官網](https://ffmpeg.org/download.html) 下載 FFmpeg 的壓縮包。
+  - 解壓縮到一個目錄，例如 `C:\Program Files\ffmpeg`。
+  - 將 `ffmpeg` 目錄下的 `bin` 目錄添加到你的系統環境變數 PATH 中。
+
+- **Linux**：
+
+  ```bash
+  sudo apt update
+  sudo apt install ffmpeg
+  ```
+
+## 項目結構
+
+```plaintext
+TranscriptionProject/
+│
+├── app/
+│   ├── __init__.py       # 初始化 Flask 應用
+│   ├── routes.py         # 定義 API 路由
+│   ├── downloader.py     # 視頻下載邏輯
+│   ├── audio_extractor.py # 音頻提取邏輯
+│   ├── speech_to_text.py  # 語音轉文字邏輯
+│   ├── utils.py          # 工具函數
+│
+├── downloads/            # 下載的視頻
+│
+├── audios/               # 轉換的音頻
+│
+├── scripts/              # 生成的逐字稿
+│
+├── venv/                 # 虛擬環境
+│
+├── requirements.txt      # 專案依賴
+│
+├── run.py                # 啟動應用
+├── readme.md             # 專案說明文件
+│
+└── .gitignore            # Git 忽略文件
+```
+
+## 啟動應用
+
+使用以下命令啟動 Flask 應用：
+
+```bash
+python run.py
+```
+
+## 使用說明
+
+這個應用提供了一個 API 來下載會議視頻、轉換音頻並生成逐字稿。
+
+### 1. 轉換視頻為逐字稿
+
+**URL**: `/api/transcribe`
+
+**方法**: `POST`
+
+**請求體**:
+
+```json
+{
+    "url": "https://ivod.ly.gov.tw/Play/Clip/300K/154397"
+}
+```
+
+**範例**:
+
+```sh
+curl -X POST http://localhost:5000/api/transcribe -H "Content-Type: application/json" -d '{"url": "https://ivod.ly.gov.tw/Play/Clip/300K/154397"}'
+```
+
+**回應**:
+
+```json
+{
+    "message": "轉換成功"
+}
+```
+
+### API 邏輯
+
+當 API 被調用時，會執行以下步驟：
+
+1. 檢查視頻是否已經存在於 `downloads` 目錄中。
+2. 如果視頻不存在，從提供的 URL 下載視頻。
+3. 檢查音頻是否已經存在於 `audios` 目錄中。
+4. 如果音頻不存在，從視頻中提取音頻並保存。
+5. 檢查逐字稿是否已經存在於 `scripts` 目錄中。
+6. 如果逐字稿不存在，轉錄音頻並保存逐字稿。
+7. 返回轉換成功的消息。
+
+## 開發與貢獻
+
+鄉民玩 AI 系列基於取之於鄉民，用之於鄉民的精神，全系列進行 [CC0](https://ti-wb.github.io/creativecommon-tw/cc0.html) 「公眾領域貢獻宣告 」，歡迎所有讀者自由使用，也歡迎透過 GitHub 與我們一同協作，或是提交 Issues 給予我們建議。
+
+感謝您使用 Video Script！

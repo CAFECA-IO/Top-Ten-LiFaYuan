@@ -4,6 +4,7 @@ import subprocess
 import os
 import time
 from .utils import setup_logger, init_driver
+from pyppeteer import launch
 
 logger = setup_logger('downloader', 'downloader.log')
 
@@ -35,4 +36,16 @@ def get_video_source(url):
     logger.info("視頻源地址：", filelink)
     driver.quit()
 
+    return filelink
+
+async def get_video_source_by_puppeteer(url):
+    browser = await launch(headless=True)
+    page = await browser.newPage()
+    await page.goto(url, {'waitUntil': 'networkidle2'})
+
+    # 獲取視頻源地址
+    filelink = await page.evaluate('window._filelink')
+    print("視頻源地址：", filelink)
+
+    await browser.close()
     return filelink

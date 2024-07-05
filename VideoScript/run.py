@@ -3,15 +3,17 @@
 import sys
 import os
 import threading
+import asyncio
 from app import app
 from app.audio_quality_analysis import analysis
 from app.audio_extractor import extract_audio, process_audio
 from app.transcribe import transcribe_audio
 from app.optimize import optimize_transcription
-from app.downloader import download_video, get_video_source
+from app.downloader import download_video, get_video_source, get_video_source_by_puppeteer
 
-video_id = "154397"
-video_url = f"https://ivod.ly.gov.tw/Play/Clip/300K/{video_id}"
+# video_url = "https://ivod.ly.gov.tw/Play/Clip/300K/154397"
+video_url = "https://ivod.ly.gov.tw/Play/Clip/300K/154522"
+video_id = video_url.split('/')[-1]
 
 if __name__ == '__main__':
     # app.run(debug=True)
@@ -29,11 +31,29 @@ if __name__ == '__main__':
 
     if len(sys.argv) > 1:
         if 'download' in sys.argv:
+            if len(sys.argv) < 3:
+                print(f"Usage: python script.py download <video_url> or use default video url {video_url}")
+            else:
+                video_url = sys.argv[2]
+                video_id = video_url.split('/')[-1]
             print(f"Downloading video from {video_url}")
             video_path = os.path.join('downloads', f'downloaded_meeting_{video_id}.mp4')
+            """
+            # using chrome to get video source
+
             m3u8_url = get_video_source(video_url)
             if not m3u8_url:
                 print("Failed to get video source")
+                sys.exit(1)
+            """
+            try:
+                loop = asyncio.get_event_loop()
+                m3u8_url = loop.run_until_complete(get_video_source_by_puppeteer(video_url))
+                if not m3u8_url:
+                    print("Failed to get video source")
+                    sys.exit(1)
+            except Exception as e:
+                print(f"Error during fetching video source: {e}")
                 sys.exit(1)
             print(f"Downloading video from {m3u8_url} to {video_path}")
             download_thread = threading.Thread(target=download_video, args=(m3u8_url, video_path))

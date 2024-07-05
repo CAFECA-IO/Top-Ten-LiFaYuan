@@ -13,31 +13,27 @@ logger = setup_logger('transcribe', 'transcribe.log')
 
 def transcribe_audio(audio_path, output_path, model_name="base", language="zh", diarization_model="inaSpeechSegmenter"):
     start_time = time.time()
+
+    # 確認 CUDA 設置
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Loading model: {model_name} on device: {device}")
 
     # 設置 ASR 選項
     asr_options = {
-        'max_new_tokens': 1024,
-        'clip_timestamps': True,
-        'hallucination_silence_threshold': 0.1,
-        'hotwords': None
+        'max_new_tokens': 1024, # 限制生成的最大 token 數
+        'clip_timestamps': True, # 控制是否對時間戳進行截斷，使其對應的轉錄片段更準確。True: 轉錄片段的時間戳會被截斷，更精確地對應實際的音頻片段，適合需要精確對應時間戳的應用。
+        'hallucination_silence_threshold': 0.2, # 設置模型識別的沉默門檻，用於過濾掉誤判為語音的靜音段。設置範圍: 0.0 - 1.0。根據噪音水平調整。
+        'hotwords': ["低碳", "碳排放", "再生能源", "低碳發電", "賴清德", "不實文件", "能源政策",]
     }
-
-    # 確認 CUDA 設置
-    if torch.cuda.is_available() and device == "cuda":
-        device = torch.device("cuda")
-    else:
-        device = torch.device("cpu")
-    logger.info(f"Using device: {device}")
 
     # 加載模型，傳遞正確的參數
     model = whisperx.load_model(
-        whisper_arch=model_name,
-        device=device.type,
-        compute_type="float32",
-        asr_options=asr_options,
-        language=language,
-        threads=4
+        whisper_arch=model_name, # 選擇模型架構，例如 'base'
+        device=device.type, # 指定設備類型，例如 'cuda' 或 'cpu'
+        compute_type="float32", # 指定計算類型，影響模型計算的精度和速度。，例如 'float32' 或 'float16'。'float32': 更高的精度，但計算速度較慢，內存佔用較高。
+        asr_options=asr_options, # 傳遞 ASR 選項
+        language=language, # 指定語言，例如 'zh' 表示中文
+        threads=4 # 設置線程數，用於加速模型推理
     )
     logger.info(f"Model loaded successfully. Time taken: {time.time() - start_time} seconds")
     

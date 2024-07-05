@@ -2,91 +2,102 @@
 
 import sys
 import os
-import threading
-import asyncio
 from app import app
-from app.audio_quality_analysis import analysis
+# from app.audio_quality_analysis import analysis
 from app.audio_extractor import extract_audio, process_audio
 from app.transcribe import transcribe_audio
 from app.optimize import optimize_transcription
-from app.downloader import download_video, get_video_source, get_video_source_by_puppeteer
+from app.downloader import download
+from app.summarize import generate_summary
+from app.utils import get_path, setup_logger
 
-# video_url = "https://ivod.ly.gov.tw/Play/Clip/300K/154397"
+logger = setup_logger('run', 'run.log')
+
 video_url = "https://ivod.ly.gov.tw/Play/Clip/300K/154522"
-video_id = video_url.split('/')[-1]
+
+def download_if_needed(video_url, video_id):
+    video_path = get_path('downloads', video_id, 'mp4')
+    if not os.path.exists(video_path):
+        logger.info(f"Video not found, downloading video from {video_url}")
+        download(video_url)
+    return video_path
+
+def extract_audio_if_needed(video_path, video_id):
+    audio_path = get_path('audios', video_id, 'wav')
+    if not os.path.exists(audio_path):
+        logger.info(f"Extracting audio from {video_path} to {audio_path}")
+        extract_audio(video_path, audio_path)
+    return audio_path
+
+def process_audio_if_needed(audio_path, video_id, low_pass_freq=6000, high_pass_freq=150):
+    processed_path = get_path('audios', f'processed_{video_id}', 'wav')
+    if not os.path.exists(processed_path):
+        logger.info(f"Processing audio from {audio_path} to {processed_path}")
+        process_audio(audio_path, processed_path, low_pass_freq=low_pass_freq, high_pass_freq=high_pass_freq)
+    return processed_path
+
+def transcribe_if_needed(processed_path, video_id, model_name="medium", language="zh"):
+    transcript_path = get_path('scripts', video_id, 'json')
+    if not os.path.exists(transcript_path):
+        logger.info(f"Transcribing audio from {processed_path} to {transcript_path}")
+        transcribe_audio(processed_path, transcript_path, model_name=model_name, language=language)
+    return transcript_path
+
+def optimize_if_needed(transcript_path, video_id):
+    optimized_path = get_path('scripts', f'optimized_{video_id}', 'json')
+    if not os.path.exists(optimized_path):
+        logger.info(f"Optimizing transcript from {transcript_path}")
+        optimize_transcription(transcript_path, optimized_path)
+    return optimized_path
+
+def summarize_if_needed(optimized_path, video_id):
+    summary_path = get_path('scripts', f'summary_{video_id}', 'txt')
+    logger.info(f"Generating summary from {optimized_path} to {summary_path}")
+    generate_summary(optimized_path, summary_path)
+    return summary_path
 
 if __name__ == '__main__':
     # app.run(debug=True)
-    downloads_dir = os.path.join(os.getcwd(), 'downloads')
-    if not os.path.exists(downloads_dir):
-        os.makedirs(downloads_dir)
-    
-    audios_dir = os.path.join(os.getcwd(), 'audios')
-    if not os.path.exists(audios_dir):
-        os.makedirs(audios_dir)
-    
-    scripts_dir = os.path.join(os.getcwd(), 'scripts')
-    if not os.path.exists(scripts_dir):
-        os.makedirs(scripts_dir)
 
     if len(sys.argv) > 1:
+        if len(sys.argv) < 3:
+            logger.info(f"Usage: python script.py download <video_url> or use default video url {video_url}")
+        else:
+            video_url = sys.argv[2]
+        video_id = video_url.split('/')[-1]
+
         if 'download' in sys.argv:
-            if len(sys.argv) < 3:
-                print(f"Usage: python script.py download <video_url> or use default video url {video_url}")
-            else:
-                video_url = sys.argv[2]
-                video_id = video_url.split('/')[-1]
-            print(f"Downloading video from {video_url}")
-            video_path = os.path.join('downloads', f'downloaded_meeting_{video_id}.mp4')
-            """
-            # using chrome to get video source
+            download(video_url)
 
-            m3u8_url = get_video_source(video_url)
-            if not m3u8_url:
-                print("Failed to get video source")
-                sys.exit(1)
-            """
-            try:
-                loop = asyncio.get_event_loop()
-                m3u8_url = loop.run_until_complete(get_video_source_by_puppeteer(video_url))
-                if not m3u8_url:
-                    print("Failed to get video source")
-                    sys.exit(1)
-            except Exception as e:
-                print(f"Error during fetching video source: {e}")
-                sys.exit(1)
-            print(f"Downloading video from {m3u8_url} to {video_path}")
-            download_thread = threading.Thread(target=download_video, args=(m3u8_url, video_path))
-            download_thread.start()
-            download_thread.join()
-
-            if not os.path.exists(video_path):
-                print(f"Failed to download video from {m3u8_url}")
-                sys.exit(1)
-
-        if 'extract' in sys.argv: 
-            video_path = os.path.join('downloads', f'downloaded_meeting_{video_id}.mp4')
-            audio_path = os.path.join('audios', f'converted_meeting_{video_id}.wav')
-            print(f"Extracting audio from {video_path} to {audio_path}")
-            extract_audio(video_path, audio_path)
+        if 'extract' in sys.argv:
+            video_path = download_if_needed(video_url, video_id)
+            extract_audio_if_needed(video_path, video_id)
 
         if 'process' in sys.argv:
-            audio_path = os.path.join('audios', f'converted_meeting_{video_id}.wav')
-            processed_audio_path = os.path.join('audios', f'processed_audio_{video_id}.wav')
-            print(f"Processing audio from {audio_path} to {processed_audio_path}")
-            process_audio(audio_path, processed_audio_path)
+            video_path = download_if_needed(video_url, video_id)
+            audio_path = extract_audio_if_needed(video_path, video_id)
+            process_audio_if_needed(audio_path, video_id)
 
         if 'transcribe' in sys.argv:
-            processed_audio_path = os.path.join('audios', f'processed_audio_{video_id}.wav')
-            transcript_path = os.path.join('scripts', f'meeting_script_{video_id}.json')
-            print(f"Transcribing audio from {processed_audio_path} to {transcript_path}")
-            transcribe_audio(processed_audio_path, transcript_path, model_name="base", language="zh")
+            video_path = download_if_needed(video_url, video_id)
+            audio_path = extract_audio_if_needed(video_path, video_id)
+            processed_path = process_audio_if_needed(audio_path, video_id)
+            transcribe_if_needed(processed_path, video_id)
 
         if 'optimize' in sys.argv:
-            transcript_path = os.path.join('scripts', f'meeting_script_{video_id}.json')
-            optimized_path = os.path.join('scripts', f'optimized_script{video_id}.json')
-            token = os.getenv("HUGGINGFACE_API_TOKEN")
-            optimized_transcriptions = optimize_transcription(transcript_path, optimized_path, model_name="taide/Llama3-TAIDE-LX-8B-Chat-Alpha1", token=token)
+            video_path = download_if_needed(video_url, video_id)
+            audio_path = extract_audio_if_needed(video_path, video_id)
+            processed_path = process_audio_if_needed(audio_path, video_id)
+            transcript_path = transcribe_if_needed(processed_path, video_id)
+            optimize_if_needed(transcript_path, video_id)
+
+        if 'summarize' in sys.argv:
+            video_path = download_if_needed(video_url, video_id)
+            audio_path = extract_audio_if_needed(video_path, video_id)
+            processed_path = process_audio_if_needed(audio_path, video_id)
+            transcript_path = transcribe_if_needed(processed_path, video_id)
+            optimized_path = optimize_if_needed(transcript_path, video_id)
+            summarize_if_needed(optimized_path, video_id)
             
     else:
         app.run(debug=True)

@@ -29,7 +29,7 @@ def extract_audio_if_needed(video_path, video_id):
         extract_audio(video_path, audio_path)
     return audio_path
 
-def process_audio_if_needed(audio_path, video_id, low_pass_freq=6000, high_pass_freq=150):
+def process_audio_if_needed(audio_path, video_id, low_pass_freq=7000, high_pass_freq=150):
     processed_path = get_path('audios', f'processed_{video_id}', 'wav')
     if not os.path.exists(processed_path):
         logger.info(f"Processing audio from {audio_path} to {processed_path}")
@@ -80,13 +80,9 @@ if __name__ == '__main__':
 
         elif 'transcribe' in sys.argv:
             video_path = download_if_needed(video_url, video_id)
-            print(video_path)
             audio_path = extract_audio_if_needed(video_path, video_id)
-            print(audio_path)
             processed_path = process_audio_if_needed(audio_path, video_id)
-            print(processed_path)
             transcribe_if_needed(processed_path, video_id)
-            print('done!')
 
         elif 'optimize' in sys.argv:
             video_path = download_if_needed(video_url, video_id)

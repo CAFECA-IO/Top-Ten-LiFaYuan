@@ -69,29 +69,33 @@ if __name__ == '__main__':
         if 'download' in sys.argv:
             download(video_url)
 
-        if 'extract' in sys.argv:
+        elif 'extract' in sys.argv:
             video_path = download_if_needed(video_url, video_id)
             extract_audio_if_needed(video_path, video_id)
 
-        if 'process' in sys.argv:
+        elif 'process' in sys.argv:
             video_path = download_if_needed(video_url, video_id)
             audio_path = extract_audio_if_needed(video_path, video_id)
             process_audio_if_needed(audio_path, video_id)
 
-        if 'transcribe' in sys.argv:
+        elif 'transcribe' in sys.argv:
             video_path = download_if_needed(video_url, video_id)
+            print(video_path)
             audio_path = extract_audio_if_needed(video_path, video_id)
+            print(audio_path)
             processed_path = process_audio_if_needed(audio_path, video_id)
+            print(processed_path)
             transcribe_if_needed(processed_path, video_id)
+            print('done!')
 
-        if 'optimize' in sys.argv:
+        elif 'optimize' in sys.argv:
             video_path = download_if_needed(video_url, video_id)
             audio_path = extract_audio_if_needed(video_path, video_id)
             processed_path = process_audio_if_needed(audio_path, video_id)
             transcript_path = transcribe_if_needed(processed_path, video_id)
             optimize_if_needed(transcript_path, video_id)
 
-        if 'summarize' in sys.argv:
+        elif 'summarize' in sys.argv:
             video_path = download_if_needed(video_url, video_id)
             audio_path = extract_audio_if_needed(video_path, video_id)
             processed_path = process_audio_if_needed(audio_path, video_id)
@@ -99,5 +103,7 @@ if __name__ == '__main__':
             optimized_path = optimize_if_needed(transcript_path, video_id)
             summarize_if_needed(optimized_path, video_id)
             
+        else:
+            print("Invalid command")
     else:
         app.run(debug=True)

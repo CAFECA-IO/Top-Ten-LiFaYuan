@@ -70,6 +70,7 @@ munkres==1.1.4
 namex==0.0.8
 networkx==3.3
 nltk==3.8.1
+noisereduce==3.0.2
 numba==0.60.0
 numpy==1.26.4
 omegaconf==2.3.0
@@ -145,6 +146,7 @@ torch-audiomentations==0.11.1
 torch-pitch-shift==1.2.4
 torchaudio==2.2.2
 torchmetrics==1.4.0.post0
+torchvision==0.17.2
 tqdm==4.66.4
 transformers==4.42.3
 trio==0.25.1

@@ -6,6 +6,11 @@ import logging
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
+import torch
+
+def clear_gpu_memory():
+    torch.cuda.empty_cache()
+    torch.cuda.synchronize()
 
 def setup_logger(name, log_file, level=logging.INFO):
     handler = logging.FileHandler(log_file)

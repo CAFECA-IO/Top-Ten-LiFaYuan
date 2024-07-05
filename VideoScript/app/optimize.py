@@ -3,7 +3,7 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import os
 import json
-from .utils import save_to_file
+from .utils import save_to_file, clear_gpu_memory
 import torch
 
 model_name="taide/Llama3-TAIDE-LX-8B-Chat-Alpha1"
@@ -15,7 +15,14 @@ def optimize_transcription(transcript_path, optimized_path):
     tokenizer = AutoTokenizer.from_pretrained(model_name, use_auth_token=token)
     model = AutoModelForCausalLM.from_pretrained(model_name, use_auth_token=token)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
+    
+    try:
+        clear_gpu_memory()
+        model.to(device)
+    except torch.cuda.OutOfMemoryError:
+        print("CUDA out of memory, switching to CPU")
+        device = torch.device("cpu")
+        model.to(device)
     
     optimized_transcriptions = []
     for segment in segments:

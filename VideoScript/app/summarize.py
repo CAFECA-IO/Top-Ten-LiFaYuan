@@ -1,7 +1,6 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM
-import os
 import json
-from .utils import setup_logger, save_to_file
+from .utils import setup_logger, save_to_file, clear_gpu_memory
 import torch
 
 # 設置 logger
@@ -15,7 +14,14 @@ def generate_summary(optimized_transcript_path, summary_path, model_name="taide/
     model = AutoModelForCausalLM.from_pretrained(model_name, use_auth_token=token)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
+    
+    try:
+        clear_gpu_memory()
+        model.to(device)
+    except torch.cuda.OutOfMemoryError:
+        print("CUDA out of memory, switching to CPU")
+        device = torch.device("cpu")
+        model.to(device)
     
     # 合併所有段落文本
     full_text = " ".join([seg["text"] for seg in optimized_transcriptions])

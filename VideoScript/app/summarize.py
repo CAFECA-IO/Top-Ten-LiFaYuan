@@ -6,6 +6,18 @@ import torch
 # 設置 logger
 logger = setup_logger('summarize', 'summarize.log')
 
+# 設定會議總結的提示模板
+template = """
+系統：你是一個專門用於總結會議內容的助手。請使用以下多人的發言記錄來總結會議內容。如果有不明確的部分，請直接說你不知道。請保持總結簡潔，每個總結最多使用三句話。
+用戶：會議片段：
+{context}
+助理：會議總結：
+"""
+
+def create_prompt(context):
+    return template.format(context=context)
+
+
 def generate_summary(optimized_transcript_path, summary_path, model_name="taide/Llama3-TAIDE-LX-8B-Chat-Alpha1", token=None):
     with open(optimized_transcript_path, 'r') as f:
         optimized_transcriptions = json.load(f)
@@ -23,13 +35,20 @@ def generate_summary(optimized_transcript_path, summary_path, model_name="taide/
         device = torch.device("cpu")
         model.to(device)
     
-    # 合併所有段落文本
-    full_text = " ".join([seg["text"] for seg in optimized_transcriptions])
+    # 合併所有段落文本並生成提示
+    full_text = ' '.join([seg["text"] for seg in optimized_transcriptions])
+    prompt = create_prompt(full_text)
+    inputs = tokenizer(prompt, return_tensors="pt").to(device)
+
+    # 確保摘要短於輸入文本
+    input_length = len(full_text.split())
+    max_new_tokens = max(50, input_length // 2)  # 確保生成的摘要比輸入文本短
+
     inputs = tokenizer(full_text, return_tensors="pt").to(device)
 
     # 設置生成配置
     generation_config = {
-        "max_new_tokens": 150,         # 限制生成的最大token數
+        "max_new_tokens": max_new_tokens,         # 限制生成的最大token數
         "min_length": 50,          # 生成的最小token數
         "temperature": 0.7,        # 控制生成的隨機性
         "top_k": 50,               # 只考慮概率最高的前k個標記
@@ -42,8 +61,8 @@ def generate_summary(optimized_transcript_path, summary_path, model_name="taide/
         "no_repeat_ngram_size": 2  # 禁止在生成文本中出現的n-gram的大小
     }
 
-    logger.info(f"Generating summary for optimized transcript.")  # 添加日誌記錄
     summary_outputs = model.generate(**inputs, **generation_config)
+    print(f"Generating summary for optimized transcript.", summary_outputs)  # 添加日誌記錄
     summary_text = tokenizer.decode(summary_outputs[0], skip_special_tokens=True)
     
     save_to_file(summary_text, summary_path)

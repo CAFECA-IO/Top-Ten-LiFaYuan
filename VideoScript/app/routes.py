@@ -17,6 +17,10 @@ logger = setup_logger('routes', 'routes.log')
 # 加載 .env 文件
 load_dotenv()
 
+@app.route('/')
+def index():
+    return "Welcome to VideoScript!"
+
 @app.route('/api/transcribe', methods=['POST'])
 def transcribe_video():
     video_url = request.json.get('url')

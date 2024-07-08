@@ -3,18 +3,31 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import os
 import json
-from .utils import save_to_file
+from .utils import save_to_file, clear_gpu_memory
+import torch
 
-def optimize_transcription(transcript_path, optimized_path, model_name="taide/Llama3-TAIDE-LX-8B-Chat-Alpha1", token=None):
+model_name="taide/Llama3-TAIDE-LX-8B-Chat-Alpha1"
+
+def optimize_transcription(transcript_path, optimized_path):
+    token = os.getenv("HUGGINGFACE_API_TOKEN")
     with open(transcript_path, 'r') as f:
         segments = json.load(f)
     tokenizer = AutoTokenizer.from_pretrained(model_name, use_auth_token=token)
     model = AutoModelForCausalLM.from_pretrained(model_name, use_auth_token=token)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    try:
+        clear_gpu_memory()
+        model.to(device)
+    except torch.cuda.OutOfMemoryError:
+        print("CUDA out of memory, switching to CPU")
+        device = torch.device("cpu")
+        model.to(device)
     
     optimized_transcriptions = []
     for segment in segments:
         input_text = segment["text"]
-        inputs = tokenizer(input_text, return_tensors="pt").to(model.device)
+        inputs = tokenizer(input_text, return_tensors="pt").to(device)
 
         # 設置生成配置
         generation_config = {

@@ -2,7 +2,8 @@
 
 import subprocess
 from pydub import AudioSegment
-from .utils import setup_logger
+import noisereduce as nr
+from .utils import setup_logger, get_path
 
 # 設置 logger
 logger = setup_logger('audio_extractor', 'audio_extractor.log')
@@ -47,20 +48,28 @@ def extract_audio(video_path, audio_path):
         logger.info(f"提取音頻時出現錯誤：{e}")
 
 
-def process_audio(input_path, output_path):
+def process_audio(input_path, output_path, low_pass_freq=8000, high_pass_freq=100):
     """
-    使用 pydub 讀取音頻文件並進行處理，包括歸一化和應用高通、低通濾波器。
+    使用 pydub 讀取音頻文件並進行處理，包括降噪、歸一化和應用高通、低通濾波器。
     """
     # 使用 pydub 讀取音頻文件
     audio = AudioSegment.from_file(input_path)
+    samples = audio.get_array_of_samples()
+    sample_rate = audio.frame_rate
+
+    # 使用 noisereduce 進行降噪處理
+    reduced_noise = nr.reduce_noise(y=samples, sr=sample_rate)
+
+    # 更新音頻數據
+    audio = audio._spawn(reduced_noise.tobytes())
     
     # 基本音頻處理，例如音頻歸一化
     audio = audio.normalize()
     
     # 進行更多處理，如降噪、均衡等
     # 這裡僅做簡單的均衡處理
-    audio = audio.low_pass_filter(8000)  # 低通濾波器，去除高頻噪音
-    audio = audio.high_pass_filter(100)  # 高通濾波器，去除低頻噪音
+    audio = audio.low_pass_filter(low_pass_freq)  # 低通濾波器，去除高頻噪音
+    audio = audio.high_pass_filter(high_pass_freq)  # 高通濾波器，去除低頻噪音
     
     # 保存處理後的音頻
     audio.export(output_path, format="wav", codec="pcm_s16le")

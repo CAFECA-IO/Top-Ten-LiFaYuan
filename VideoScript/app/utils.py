@@ -1,5 +1,5 @@
 # app/utils.py
-
+import json
 import logging
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -26,3 +26,7 @@ def init_driver():
     options.add_argument('--disable-extensions')
 
     return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+
+def save_to_file(data, file_path):
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)

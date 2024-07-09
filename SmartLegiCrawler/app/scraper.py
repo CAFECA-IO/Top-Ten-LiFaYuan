@@ -36,6 +36,82 @@ async def get_page_content(browser, url):
     await page.close()
     return content
 
+def parse_video_element(video_element):
+    """解析單個視頻元素，提取視頻信息"""
+    video_info = {}
+    base_url = 'https://ivod.ly.gov.tw'
+    
+    committee_info = video_element.find('div', class_='clip-list-text')
+    if committee_info:
+        p_tags = committee_info.find_all('p')
+        for p in p_tags:
+            if '委員：' in p.get_text():
+                video_info['member'] = p.get_text(strip=True).replace('委員：', '')
+            if '委員發言時間：' in p.get_text():
+                video_info['speech_time'] = p.get_text(strip=True).replace('委員發言時間：', '')
+            if '影片長度：' in p.get_text():
+                video_info['video_length'] = p.get_text(strip=True).replace('影片長度：', '')
+
+    committee_video = video_element.find('div', class_='clip-list-thumbnail')
+    if committee_video:
+        video_info['video_links'] = {}
+        links = committee_video.find_all('a')
+        for link in links:
+            video_info['video_links'][link['title']] = base_url + link['href']
+
+    return video_info
+
+async def scrape_video_links(meeting_id):
+    """爬取會議視頻鏈接"""
+    base_url = 'https://ivod.ly.gov.tw'
+    meeting_url = f'http://ivod.ly.gov.tw/Demand/Meetvod?Meet={meeting_id}'
+    browser = await init_driver()
+    page = 1
+    video_details = {
+        'meeting_id': meeting_id,
+        'meeting_time': '',
+        'meeting_name': '',
+        'video_links': []
+    }
+    
+    while True:
+        paginated_url = f"{meeting_url}&page={page}"
+        logger.info(f"正在爬取 URL: {paginated_url}")
+        page_content = await get_page_content(browser, paginated_url)
+        soup = BeautifulSoup(page_content, 'html.parser')
+
+        if page == 1:
+            committee_data = soup.select_one('div.committee-data-info')
+            if committee_data:
+                committee_info = committee_data.find('div', class_='clip-list-text')
+                if committee_info:
+                    video_details['committee'] = committee_info.find('h5').get_text(strip=True)
+                    video_details['meeting_time'] = committee_info.find('span', class_='time').text
+                    video_details['meeting_name'] = committee_info.find('span', class_='metdec').text
+
+                committee_video = committee_data.find('div', class_='clip-list-thumbnail')
+                if committee_video:
+                    video_info = {'type': 'full', 'video_links': {}}
+                    for a in committee_video.find_all('a'):
+                        video_info['video_links'][a['title']] = base_url + a['href']
+                    video_details['video_links'].append(video_info)
+
+        no_data_div = soup.find('div', class_='list-nodate')
+        if no_data_div:
+            break
+        
+        clip_list = soup.find('div', class_='clip-list')
+        if clip_list:
+            for ul in clip_list.find_all('ul'):
+                video_info = parse_video_element(ul)
+                video_info['type'] = 'clip'
+                video_details['video_links'].append(video_info)
+
+        page += 1
+
+    await browser.close()
+    return video_details
+
 async def parse_meeting_element(date, meeting_element):
     """解析單個會議元素，提取會議信息"""
     meeting = {'date': date}
@@ -125,80 +201,3 @@ async def scrape_meetings(start_date=None, end_date=None, page=None, q=None, com
 
     await browser.close()
     return meetings, len(meetings) >= limit, current_page
-
-def parse_video_element(video_element):
-    """解析單個視頻元素，提取視頻信息"""
-    video_info = {}
-    base_url = 'https://ivod.ly.gov.tw'
-    
-    committee_info = video_element.find('div', class_='clip-list-text')
-    if committee_info:
-        p_tags = committee_info.find_all('p')
-        for p in p_tags:
-            if '委員：' in p.get_text():
-                video_info['member'] = p.get_text(strip=True).replace('委員：', '')
-            if '委員發言時間：' in p.get_text():
-                video_info['speech_time'] = p.get_text(strip=True).replace('委員發言時間：', '')
-            if '影片長度：' in p.get_text():
-                video_info['video_length'] = p.get_text(strip=True).replace('影片長度：', '')
-
-    committee_video = video_element.find('div', class_='clip-list-thumbnail')
-    if committee_video:
-        video_info['video_links'] = {}
-        links = committee_video.find_all('a')
-        for link in links:
-            video_info['video_links'][link['title']] = base_url + link['href']
-
-    return video_info
-
-async def scrape_video_links(meeting_id):
-    """爬取會議視頻鏈接"""
-    base_url = 'https://ivod.ly.gov.tw'
-    meeting_url = f'http://ivod.ly.gov.tw/Demand/Meetvod?Meet={meeting_id}'
-    browser = await init_driver()
-    page = 1
-    video_details = {
-        'meeting_id': meeting_id,
-        'meeting_time': '',
-        'meeting_name': '',
-        'video_links': []
-    }
-    
-    while True:
-        paginated_url = f"{meeting_url}&page={page}"
-        logger.info(f"正在爬取 URL: {paginated_url}")
-        page_content = await get_page_content(browser, paginated_url)
-        soup = BeautifulSoup(page_content, 'html.parser')
-
-        if page == 1:
-            committee_data = soup.select_one('div.committee-data-info')
-            if committee_data:
-                committee_info = committee_data.find('div', class_='clip-list-text')
-                if committee_info:
-                    video_details['committee'] = committee_info.find('h5').get_text(strip=True)
-                    video_details['meeting_time'] = committee_info.find('span', class_='time').text
-                    video_details['meeting_name'] = committee_info.find('span', class_='metdec').text
-
-                committee_video = committee_data.find('div', class_='clip-list-thumbnail')
-                if committee_video:
-                    video_info = {'type': 'full', 'video_links': {}}
-                    for a in committee_video.find_all('a'):
-                        video_info['video_links'][a['title']] = base_url + a['href']
-                    video_details['video_links'].append(video_info)
-
-        no_data_div = soup.find('div', class_='list-nodate')
-        if no_data_div:
-            break
-        
-        clip_list = soup.find('div', class_='clip-list')
-        if clip_list:
-            for ul in clip_list.find_all('ul'):
-                video_info = parse_video_element(ul)
-                video_info['type'] = 'clip'
-                video_details['video_links'].append(video_info)
-
-        page += 1
-
-    await browser.close()
-    return video_details
-    

@@ -97,10 +97,11 @@ if __name__ == '__main__':
             audio_path = extract_audio_if_needed(video_path, video_id)
             processed_path = process_audio_if_needed(audio_path, video_id)
             transcript_path = transcribe_if_needed(processed_path, video_id)
-            optimized_path = optimize_if_needed(transcript_path, video_id)
-            summarize_if_needed(optimized_path, video_id)
+            # optimized_path = optimize_if_needed(transcript_path, video_id)
+            # summarize_if_needed(optimized_path, video_id)
+            summarize_if_needed(transcript_path, video_id)
             
         else:
             print("Invalid command")
     else:
-        app.run(debug=True)
+        app.run(host='0.0.0.0', port=5000, debug=True)

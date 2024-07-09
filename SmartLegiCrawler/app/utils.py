@@ -3,6 +3,8 @@ import logging
 # from selenium.webdriver.chrome.service import Service
 # from webdriver_manager.chrome import ChromeDriverManager
 from pyppeteer import launch
+import os
+import json
 
 # 配置日誌紀錄
 def setup_logger(name, log_file, level=logging.INFO):
@@ -62,4 +64,10 @@ async def init_driver():
     browser = await launch(headless=True, args=['--no-sandbox'])
     return browser
 
-# 其他工具函数可以根据需要添加
+def get_path(folder, file_name):
+    # 讀取配置文件中的資料夾路徑
+    config_path = os.path.join(os.path.dirname(__file__), '../config.json')
+    with open(config_path, 'r') as config_file:
+        config = json.load(config_file)
+    path = os.path.join(config[folder], file_name)
+    return path

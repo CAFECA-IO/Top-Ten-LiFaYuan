@@ -28,7 +28,15 @@ def get_url(page=None, start_date=None, end_date=None, q=None, committee=None):
 
     return url
 
-def parse_meeting_element(date, meeting_element):
+async def get_page_content(browser, url):
+    """取得頁面內容"""
+    page = await browser.newPage()
+    await page.goto(url)
+    content = await page.content()
+    await page.close()
+    return content
+
+async def parse_meeting_element(date, meeting_element):
     """解析單個會議元素，提取會議信息"""
     meeting = {'date': date}
 
@@ -57,6 +65,8 @@ def parse_meeting_element(date, meeting_element):
             meeting_id = re.search(r'Meet=([0-9]+)', link_tag['href'])
             if meeting_id:
                 meeting['meeting_id'] = meeting_id.group(1)
+                video_links = await scrape_video_links(meeting_id.group(1))
+                meeting['video_links'] = video_links
 
     con_data_div = meeting_element.find('div', class_='con_data')
     if con_data_div:
@@ -66,17 +76,17 @@ def parse_meeting_element(date, meeting_element):
 
     return meeting
 
-def scrape_meetings(start_date=None, end_date=None, page=None, q=None, committee=None, limit=100):
+async def scrape_meetings(start_date=None, end_date=None, page=None, q=None, committee=None, limit=100):
     """爬取會議列表"""
-    driver = init_driver()
+    browser = await init_driver()
     meetings = []
     current_page = page if page else 1
 
     while True:
         url = get_url(current_page, start_date, end_date, q, committee)
         logger.info(f"正在爬取 URL: {url}")
-        driver.get(url)
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
+        page_content = await get_page_content(browser, url)
+        soup = BeautifulSoup(page_content, 'html.parser')
 
         meeting_elements = soup.select('ul.list-group.newsType2 li')
         date = None
@@ -84,7 +94,7 @@ def scrape_meetings(start_date=None, end_date=None, page=None, q=None, committee
             date_element = meeting_element.find('div', class_='date')
             if date_element:
                 date = parse_meeting_date(date_element)
-            meeting = parse_meeting_element(date, meeting_element)
+            meeting = await parse_meeting_element(date, meeting_element)
             meetings.append(meeting)
             if len(meetings) >= limit:
                 break
@@ -95,8 +105,8 @@ def scrape_meetings(start_date=None, end_date=None, page=None, q=None, committee
         # 檢查是否還有更多頁面
         pagination = soup.select_one('ul.pagination')
         if pagination is None:
-            driver.get(url)
-            soup = BeautifulSoup(driver.page_source, 'html.parser')
+            page_content = await get_page_content(browser, url)
+            soup = BeautifulSoup(page_content, 'html.parser')
             pagination = soup.select_one('ul.pagination')
         pagination_items = pagination.find_all('li')
         if not pagination_items:
@@ -113,7 +123,7 @@ def scrape_meetings(start_date=None, end_date=None, page=None, q=None, committee
             except ValueError:
                 break
 
-    driver.quit()
+    await browser.close()
     return meetings, len(meetings) >= limit, current_page
 
 def parse_video_element(video_element):
@@ -141,11 +151,11 @@ def parse_video_element(video_element):
 
     return video_info
 
-def scrape_video_links(meeting_id):
+async def scrape_video_links(meeting_id):
     """爬取會議視頻鏈接"""
     base_url = 'https://ivod.ly.gov.tw'
     meeting_url = f'http://ivod.ly.gov.tw/Demand/Meetvod?Meet={meeting_id}'
-    driver = init_driver()
+    browser = await init_driver()
     page = 1
     video_details = {
         'meeting_id': meeting_id,
@@ -157,8 +167,8 @@ def scrape_video_links(meeting_id):
     while True:
         paginated_url = f"{meeting_url}&page={page}"
         logger.info(f"正在爬取 URL: {paginated_url}")
-        driver.get(paginated_url)
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
+        page_content = await get_page_content(browser, paginated_url)
+        soup = BeautifulSoup(page_content, 'html.parser')
 
         if page == 1:
             committee_data = soup.select_one('div.committee-data-info')
@@ -189,5 +199,6 @@ def scrape_video_links(meeting_id):
 
         page += 1
 
-    driver.quit()
+    await browser.close()
     return video_details
+    

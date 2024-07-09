@@ -1,7 +1,8 @@
 import logging
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
+# from selenium import webdriver
+# from selenium.webdriver.chrome.service import Service
+# from webdriver_manager.chrome import ChromeDriverManager
+from pyppeteer import launch
 
 # 配置日誌紀錄
 def setup_logger(name, log_file, level=logging.INFO):
@@ -40,18 +41,25 @@ def parse_meeting_date(date_element):
     return None
 
 # 初始化瀏覽器驅動
-def init_driver():
+# def init_driver():
+#     """
+#     配置瀏覽器選項
+#     """
+#     options = webdriver.ChromeOptions()
+#     options.add_argument('--headless')
+#     options.add_argument('--disable-gpu')
+#     options.add_argument('--no-sandbox')
+#     options.add_argument('start-maximized')
+#     options.add_argument('disable-infobars')
+#     options.add_argument('--disable-extensions')
+
+#     return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+
+async def init_driver():
     """
     配置瀏覽器選項
     """
-    options = webdriver.ChromeOptions()
-    options.add_argument('--headless')
-    options.add_argument('--disable-gpu')
-    options.add_argument('--no-sandbox')
-    options.add_argument('start-maximized')
-    options.add_argument('disable-infobars')
-    options.add_argument('--disable-extensions')
-
-    return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    browser = await launch(headless=True, args=['--no-sandbox'])
+    return browser
 
 # 其他工具函数可以根据需要添加

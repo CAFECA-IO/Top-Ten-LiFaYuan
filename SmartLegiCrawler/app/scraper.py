@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 import re
+import asyncio
 from .utils import parse_meeting_date, setup_logger, init_driver
 
 # 設置 logger
@@ -61,11 +62,10 @@ def parse_video_element(video_element):
 
     return video_info
 
-async def scrape_video_links(meeting_id):
+async def scrape_video_links(browser, meeting_id):
     """爬取會議視頻鏈接"""
     base_url = 'https://ivod.ly.gov.tw'
     meeting_url = f'http://ivod.ly.gov.tw/Demand/Meetvod?Meet={meeting_id}'
-    browser = await init_driver()
     page = 1
     video_details = {
         'meeting_id': meeting_id,
@@ -109,10 +109,9 @@ async def scrape_video_links(meeting_id):
 
         page += 1
 
-    await browser.close()
     return video_details
 
-async def parse_meeting_element(date, meeting_element):
+async def parse_meeting_element(browser, date, meeting_element):
     """解析單個會議元素，提取會議信息"""
     meeting = {'date': date}
 
@@ -141,7 +140,7 @@ async def parse_meeting_element(date, meeting_element):
             meeting_id = re.search(r'Meet=([0-9]+)', link_tag['href'])
             if meeting_id:
                 meeting['meeting_id'] = meeting_id.group(1)
-                video_links = await scrape_video_links(meeting_id.group(1))
+                video_links = await scrape_video_links(browser, meeting_id.group(1))
                 meeting['video_links'] = video_links
 
     con_data_div = meeting_element.find('div', class_='con_data')
@@ -166,15 +165,15 @@ async def scrape_meetings(start_date=None, end_date=None, page=None, q=None, com
 
         meeting_elements = soup.select('ul.list-group.newsType2 li')
         date = None
+        tasks = []
         for meeting_element in meeting_elements:
             date_element = meeting_element.find('div', class_='date')
             if date_element:
                 date = parse_meeting_date(date_element)
-            meeting = await parse_meeting_element(date, meeting_element)
-            meetings.append(meeting)
-            if len(meetings) >= limit:
-                break
-
+            tasks.append(parse_meeting_element(browser, date, meeting_element))
+        
+        meetings_batch = await asyncio.gather(*tasks)
+        meetings.extend(meetings_batch)
         if len(meetings) >= limit:
             break
 

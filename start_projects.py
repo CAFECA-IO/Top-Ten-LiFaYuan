@@ -39,11 +39,21 @@ processes = []
 
 # 啟動每個小專案
 for project in projects:
+    # 配置虛擬環境並安裝依賴
+    venv_path = os.path.join(project["path"], "venv")
+    if not os.path.exists(venv_path):
+        print(f"Setting up virtual environment for {project['name']}...")
+        subprocess.run(f"python3 -m venv venv", shell=True, cwd=project["path"])
+        if os.name == 'nt':
+            activate_command = os.path.join(venv_path, "Scripts", "activate.bat")
+        else:
+            activate_command = f"source {os.path.join(venv_path, 'bin', 'activate')}"
+        
+        subprocess.run(f"{activate_command} && pip install -r requirements.txt", shell=True, cwd=project["path"])
+    
+    # 啟動項目
     command = (
-        f"python run.py --port {project['port']} --shared_data {shared_data_path} "
-        f"--videos {subfolder_paths['videos']} --audios {subfolder_paths['audios']} "
-        f"--processed_audios {subfolder_paths['processed_audios']} --transcripts {subfolder_paths['transcripts']} "
-        f"--optimized_transcripts {subfolder_paths['optimized_transcripts']} --summarized_transcripts {subfolder_paths['summarized_transcripts']}"
+        f"{activate_command} && python run.py --port {project['port']}"
     )
     print(f"Starting {project['name']} on port {project['port']}...")
     process = subprocess.Popen(command, shell=True, cwd=project['path'])

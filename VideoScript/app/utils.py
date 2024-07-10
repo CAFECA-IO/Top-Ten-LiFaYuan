@@ -43,10 +43,18 @@ def ensure_dir_exists(directory):
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
 
+def get_shared_data_path():
+    # 取得 VideoScript 資料夾的絕對路徑
+    video_script_path = os.path.abspath(os.path.join(__file__, '../../..'))
+
+    # 拼接 shared_data 的路徑
+    shared_data_path = os.path.join(video_script_path, 'shared_data')
+
+    return shared_data_path
+
 def get_path(folder, file_name):
     # 讀取配置文件中的資料夾路徑
-    config_path = os.path.join(os.path.dirname(__file__), '../config.json')
-    with open(config_path, 'r') as config_file:
-        config = json.load(config_file)
-    path = os.path.join(config[folder], file_name)
+    shared_data_path = get_shared_data_path()
+    folder_path = os.path.join(shared_data_path, folder)
+    path = os.path.join(folder_path, file_name)
     return path

@@ -1,7 +1,7 @@
-from flask import Flask
+from quart import Quart
 
-# 初始化 Flask 應用
-app = Flask(__name__)
+# 初始化 Quart 應用
+app = Quart(__name__)
 
 # 導入其他模塊中的路由
 from . import routes

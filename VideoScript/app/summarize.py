@@ -8,7 +8,7 @@ logger = setup_logger('summarize', 'summarize.log')
 
 # 設定會議總結的提示模板
 template = """
-系統：你是一個專門用於總結會議內容的助手。請使用以下多人的發言記錄來總結會議內容。如果有不明確的部分，請直接說你不知道。請保持總結簡潔且結構清晰，每個總結最多使用三句話，字數不超過300字。
+系統：你是一個專門用於總結會議內容的助手。請使用以下多人的發言記錄來總結會議內容。請保持總結簡潔、邏輯清晰且架構明確，每個總結最多使用三句話，字數不超過500。請使用繁體中文回答。
 用戶：會議片段：
 {context}
 助理：會議總結：
@@ -17,10 +17,22 @@ template = """
 def create_prompt(context):
     return template.format(context=context)
 
+def filter_non_informative_segments(segments):
+    filtered_segments = []
+    for segment in segments:
+        text = segment["text"]
+        if any(word in text for word in ["中文字幕组", "字幕組", "所以我希望大家能夠多多多多多多多多多多多多"]):
+            continue
+        filtered_segments.append(segment)
+    return filtered_segments
+
+
 
 def generate_summary(optimized_transcript_path, summary_path, model_name="taide/Llama3-TAIDE-LX-8B-Chat-Alpha1", token=None):
     with open(optimized_transcript_path, 'r') as f:
         optimized_transcriptions = json.load(f)
+
+    optimized_transcriptions = filter_non_informative_segments(optimized_transcriptions)
     
     tokenizer = AutoTokenizer.from_pretrained(model_name, use_auth_token=token)
     model = AutoModelForCausalLM.from_pretrained(model_name, use_auth_token=token)

@@ -1,8 +1,9 @@
-from flask import request, jsonify, send_file
+from quart import request, jsonify
 import os
 import threading
-from . import app
 import json
+import asyncio
+from . import app
 from .scraper import scrape_meetings, scrape_video_links
 from .downloader import download_video, get_video_source, get_output_filename
 from .utils import setup_logger
@@ -12,28 +13,32 @@ logger = setup_logger('routes', 'routes.log')
 
 # 第一個 API：查詢會議視頻
 @app.route('/api/meetings', methods=['GET'])
-def get_meetings():
+async def get_meetings():
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
     page = int(request.args.get('page', 1))
     q = request.args.get('q', None)
     committee = request.args.get('committee', None)
     limit = request.args.get('limit', default=100, type=int)
+    
+    loop = asyncio.new_event_loop()
+    try:
+        meetings, has_more, current_page = await scrape_meetings(start_date, end_date, page, q, committee, limit)
+        response = {
+            'total': len(meetings),
+            'has_more': has_more,
+            'current_page': current_page,
+            'message': f'總數量超過 {limit}，請帶入當前頁面的下一頁接續查詢，每次最多查詢100筆，當前頁面為 {current_page}頁。' if has_more else '這是搜尋結果的最後一頁。',
+            'meetings': meetings,
+        }
 
-    meetings, has_more, current_page = scrape_meetings(start_date, end_date, page, q, committee, limit)
+        return app.response_class(
+            response=json.dumps(response, ensure_ascii=False),
+            mimetype='application/json'
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-    response = {
-        'total': len(meetings),
-        'has_more': has_more,
-        'current_page': current_page,
-        'message': f'總數量超過 {limit}，請帶入當前頁面的下一頁接續查詢，每次最多查詢100筆，當前頁面為 {current_page}頁。' if has_more else '這是搜尋結果的最後一頁。',
-        'meetings': meetings,
-    }
-
-    return app.response_class(
-        response=json.dumps(response, ensure_ascii=False),
-        mimetype='application/json'
-    )
 
 # 第二個 API：會議視頻詳情
 @app.route('/api/meetings/<meeting_id>', methods=['GET'])

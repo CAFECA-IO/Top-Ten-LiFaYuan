@@ -12,7 +12,7 @@ from app.optimize import optimize_transcription
 from app.summarize import generate_summary
 from app.utils import get_path, setup_logger
 
-logger = setup_logger('run', 'run.log')
+logger = setup_logger('script_run', 'output.log')
 os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 
 video_url = "https://ivod.ly.gov.tw/Play/Clip/300K/154522"

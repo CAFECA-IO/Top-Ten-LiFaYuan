@@ -7,7 +7,7 @@ from .utils import setup_logger
 
 
 # 設置 logger
-logger = setup_logger('audio_quality_analysis', 'audio_quality_analysis.log')
+logger = setup_logger('audio_quality_analysis', 'output.log')
 
 def get_audio_data(audio_path):
     # 使用 pydub 讀取音頻文件

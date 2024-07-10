@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from .utils import setup_logger, get_path
 
 # 設置 logger
-logger = setup_logger('routes', 'routes.log')
+logger = setup_logger('summarize_routes', 'output.log')
 
 # 加載 .env 文件
 load_dotenv()

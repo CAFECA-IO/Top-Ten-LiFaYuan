@@ -4,7 +4,6 @@ from flask import request, jsonify
 import os
 import threading
 from . import app
-from .downloader import download_video, get_video_source
 from .audio_extractor import extract_audio, process_audio
 from .transcribe import transcribe_audio
 from .optimize import optimize_transcription
@@ -12,7 +11,7 @@ from dotenv import load_dotenv
 from .utils import setup_logger
 
 # 設置 logger
-logger = setup_logger('routes', 'routes.log')
+logger = setup_logger('script_routes', 'output.log')
 
 # 加載 .env 文件
 load_dotenv()

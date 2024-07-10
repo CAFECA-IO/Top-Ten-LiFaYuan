@@ -9,7 +9,7 @@ import threading
 from pyppeteer import launch
 from .utils import setup_logger, init_driver, get_path
 
-logger = setup_logger('downloader', 'downloader.log')
+logger = setup_logger('downloader', 'output.log')
 
 def download_video(m3u8_url, output_filename):
     command = [

@@ -14,7 +14,11 @@ def download_if_needed(video_url, video_id):
     return video_path
 
 # 設置 logger
-logger = setup_logger('routes', 'routes.log')
+logger = setup_logger('crawler_routes', 'output.log')
+
+@app.route('/')
+def index():
+    return "Welcome to SmartLegiCrawler!"
 
 # 第一個 API：查詢會議視頻
 @app.route('/api/meetings', methods=['GET'])

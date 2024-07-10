@@ -4,7 +4,7 @@ import asyncio
 from .utils import parse_meeting_date, setup_logger, init_driver
 
 # 設置 logger
-logger = setup_logger('scraper', 'scraper.log')
+logger = setup_logger('scraper', 'output.log')
 
 def get_url(page=None, start_date=None, end_date=None, q=None, committee=None):
     """生成會議列表的URL"""

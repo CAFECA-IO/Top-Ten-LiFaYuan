@@ -4,7 +4,7 @@ from .utils import setup_logger, save_to_file, clear_gpu_memory
 import torch
 
 # 設置 logger
-logger = setup_logger('summarize', 'summarize.log')
+logger = setup_logger('summarize', 'output.log')
 
 # 設定會議總結的提示模板
 template = """

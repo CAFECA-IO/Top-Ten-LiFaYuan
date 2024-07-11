@@ -39,7 +39,9 @@ Top-Ten-LiFaYuan/
 ├── VideoScript/
 │   ├── app  
 │   │    ├── __init__.py         # 初始化 Flask 應用
+│   │    ├── downloader.py       # 視頻下載邏輯
 │   │    ├── routes.py           # 定義 API 路由
+│   │    ├── scraper.py          # 網頁爬取邏輯
 │   │    ├── utils.py            # 工具函數
 │   │   
 │   ├── venv/                   # 虛擬環境
@@ -55,6 +57,7 @@ Top-Ten-LiFaYuan/
 │   ├── app  
 │   │    ├── __init__.py         # 初始化 Flask 應用
 │   │    ├── routes.py           # 定義 API 路由
+│   │    ├── summarize.py        # 總結逐字稿邏輯
 │   │    ├── utils.py            # 工具函數
 │   │   
 │   ├── venv/                   # 虛擬環境
@@ -113,6 +116,17 @@ Top-Ten-LiFaYuan/
 
 - 確保你的系統已安裝 Python 3。
 - 腳本假設每個子專案的虛擬環境和依賴文件（`requirements.txt`）都放在相應的目錄中。
+
+### 清理緩存
+
+Python 可能在某些情況下會緩存模塊導入路徑。你可以嘗試清理這些緩存：
+
+刪除 `.pyc` 文件和 `__pycache__` 目錄：
+
+```bash
+find . -name "*.pyc" -delete
+find . -name "__pycache__" -delete
+```
 
 ## 問題排除
 

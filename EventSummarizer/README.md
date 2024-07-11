@@ -70,7 +70,7 @@ TranscriptionProject/
 ├── app/
 │   ├── __init__.py         # 初始化 Flask 應用
 │   ├── routes.py           # 定義 API 路由
-│   ├── summarize.py       # 總結逐字稿邏輯
+│   ├── summarize.py        # 總結逐字稿邏輯
 │   └── utils.py            # 工具函數
 │
 ├── venv/                   # 虛擬環境

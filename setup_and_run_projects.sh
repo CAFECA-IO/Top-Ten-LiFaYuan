@@ -33,7 +33,16 @@ done
 PROJECT_NAMES=("SmartLegiCrawler" "VideoScript" "EventSummarizer")
 PROJECT_PORTS=(5000 5001 5002)
 
-# 啟動每個小專案
+check_port() {
+    local port=$1
+    if lsof -i:$port > /dev/null; then
+        echo "Port $port is already in use."
+        return 1
+    else
+        return 0
+    fi
+}
+
 for i in "${!PROJECT_NAMES[@]}"; do
     project=${PROJECT_NAMES[$i]}
     PORT=${PROJECT_PORTS[$i]}
@@ -76,7 +85,6 @@ for i in "${!PROJECT_NAMES[@]}"; do
         exit 1
     fi
 
-    # 確保 output.log 文件可以創建
     OUTPUT_LOG="$PROJECT_PATH/output.log"
     echo "Creating output.log at $OUTPUT_LOG"
     touch "$OUTPUT_LOG"
@@ -87,10 +95,18 @@ for i in "${!PROJECT_NAMES[@]}"; do
 
     ls -l "$PROJECT_PATH"  # 列出項目目錄內容，確認 output.log 是否創建成功
 
-    # 啟動項目
+    pwd
+    env | grep PYTHONPATH
+
+    while ! check_port $PORT; do
+        echo "Port $PORT is in use. Trying a new port..."
+        PORT=$((PORT+1))
+    done
+
     echo "Starting $project on port $PORT..."
     cd "$PROJECT_PATH"
-    nohup python run.py --port "$PORT" >> "output.log" 2>&1 &
+    echo "Command: nohup python run.py --port $PORT >> $OUTPUT_LOG 2>&1 &"
+    nohup python run.py --port "$PORT" >> "$OUTPUT_LOG" 2>&1 &
     if [ $? -ne 0 ]; then
         echo "Failed to start $project"
         exit 1
@@ -98,8 +114,7 @@ for i in "${!PROJECT_NAMES[@]}"; do
     cd -  # 返回腳本執行目錄
     sleep 1  # 延遲一秒以確保每個專案有時間啟動
 
-    # 檢查項目是否啟動
-    if lsof -i:$PORT; then
+    if lsof -i:$PORT > /dev/null; then
         echo "$project started successfully on port $PORT"
     else
         echo "Failed to start $project on port $PORT"

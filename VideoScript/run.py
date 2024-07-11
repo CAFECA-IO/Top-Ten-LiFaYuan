@@ -2,17 +2,15 @@
 
 import sys
 import os
-import json
 import argparse
 from app import app
-# from app.audio_quality_analysis import analysis
 from app.audio_extractor import extract_audio, process_audio
 from app.transcribe import transcribe_audio
 from app.optimize import optimize_transcription
-from app.summarize import generate_summary
 from app.utils import get_path, setup_logger
 
 logger = setup_logger('script_run', 'output.log')
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 
 video_url = "https://ivod.ly.gov.tw/Play/Clip/300K/154522"
@@ -52,12 +50,6 @@ def optimize_if_needed(transcript_path, video_id):
         optimize_transcription(transcript_path, optimized_path)
     return optimized_path
 
-def summarize_if_needed(optimized_path, video_id):
-    summary_path = get_path('summarized_transcripts', f'{video_id}.txt')
-    logger.info(f"Generating summary from {optimized_path} to {summary_path}")
-    generate_summary(optimized_path, summary_path)
-    return summary_path
-
 if __name__ == '__main__':
     # app.run(debug=True)
 
@@ -89,15 +81,6 @@ if __name__ == '__main__':
             processed_path = process_audio_if_needed(audio_path, video_id)
             transcript_path = transcribe_if_needed(processed_path, video_id)
             optimize_if_needed(transcript_path, video_id)
-
-        elif 'summarize' in sys.argv:
-            video_path = download_if_needed(video_id)
-            audio_path = extract_audio_if_needed(video_path, video_id)
-            processed_path = process_audio_if_needed(audio_path, video_id)
-            transcript_path = transcribe_if_needed(processed_path, video_id)
-            # optimized_path = optimize_if_needed(transcript_path, video_id)
-            # summarize_if_needed(optimized_path, video_id)
-            summarize_if_needed(transcript_path, video_id)
             
         else:
             print("Invalid command")
@@ -105,5 +88,10 @@ if __name__ == '__main__':
         parser = argparse.ArgumentParser(description='Run the Flask app.')
         parser.add_argument('--port', type=int, default=5001, help='Port to run the Flask app on.')
         args = parser.parse_args()
+
+        port = args.port
+        print(f"Starting app on port {port}")
+
+        
 
         app.run(host='0.0.0.0', port= args.port, debug=True)

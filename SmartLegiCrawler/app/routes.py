@@ -1,15 +1,24 @@
 from quart import request, jsonify
 import os
-import threading
 import json
-import asyncio
 from . import app
 from .scraper import scrape_meetings, scrape_video_links
-from .downloader import download_video, get_video_source, get_output_filename
-from .utils import setup_logger
+from .downloader import download
+from .utils import setup_logger, get_path
+
+def download_if_needed(video_url, video_id):
+    video_path = get_path('videos', f'{video_id}.mp4')
+    if not os.path.exists(video_path):
+        logger.info(f"Video not found, downloading video from {video_url}")
+        download(video_url)
+    return video_path
 
 # 設置 logger
-logger = setup_logger('routes', 'routes.log')
+logger = setup_logger('crawler_routes', 'output.log')
+
+@app.route('/')
+def index():
+    return "Welcome to SmartLegiCrawler!"
 
 # 第一個 API：查詢會議視頻
 @app.route('/api/meetings', methods=['GET'])
@@ -21,7 +30,6 @@ async def get_meetings():
     committee = request.args.get('committee', None)
     limit = request.args.get('limit', default=100, type=int)
     
-    loop = asyncio.new_event_loop()
     try:
         meetings, has_more, current_page = await scrape_meetings(start_date, end_date, page, q, committee, limit)
         response = {
@@ -56,32 +64,10 @@ def get_meeting_videos(meeting_id):
 
 # 第三個 API：下載視頻
 @app.route('/api/download', methods=['POST'])
-def download():
+def downloader():
     video_url = request.json.get('url')
-    
-    # 獲取視頻源地址
-    m3u8_url = get_video_source(video_url)
-    if not m3u8_url:
-        return jsonify({'error': '無法獲取視頻源地址'}), 400
-    
-    output_filename = get_output_filename(video_url)
-    
-    # 使用多線程下載視頻，防止阻塞
-    download_thread = threading.Thread(target=download_video, args=(m3u8_url, output_filename))
-    download_thread.start()
-    download_thread.join()
-
-    # 檢查文件是否存在以及大小
-    if os.path.exists(output_filename):
-        file_size = os.path.getsize(output_filename)
-        logger.info(f"下載的文件大小：{file_size} 字節")
-        try:
-            # 打印文件的絕對路徑以便調試
-            abs_path = os.path.abspath(output_filename)
-            logger.info(f"文件的絕對路徑：{abs_path}")
-            return send_file(abs_path, as_attachment=True)
-        except FileNotFoundError:
-            logger.error(f"文件未找到：{abs_path}")
-            return jsonify({'error': '文件未找到'}), 500
-    else:
-        return jsonify({'error': '下載失敗'}), 500
+    try:
+        download(video_url)
+        return jsonify({'message': '視頻下載成功'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

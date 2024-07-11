@@ -10,7 +10,7 @@ from .utils import setup_logger, save_to_file
 import sys
 import json
 
-logger = setup_logger('transcribe', 'transcribe.log')
+logger = setup_logger('transcribe', 'output.log')
 
 def transcribe_audio(audio_path, output_path, model_name="base", language="zh", diarization_model="inaSpeechSegmenter"):
     start_time = time.time()

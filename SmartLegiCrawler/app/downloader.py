@@ -1,10 +1,15 @@
+# app/downloader.py
+
 import subprocess
 import os
 import time
-from .utils import setup_logger, init_driver
+import sys
+import asyncio
+import threading
+from pyppeteer import launch
+from .utils import setup_logger, init_driver, get_path
 
-# 設置 logger
-logger = setup_logger('downloader', 'downloader.log')
+logger = setup_logger('downloader', 'output.log')
 
 def download_video(m3u8_url, output_filename):
     command = [
@@ -36,10 +41,46 @@ def get_video_source(url):
 
     return filelink
 
-def get_output_filename(video_url):
-    downloads_dir = os.path.join(os.getcwd(), 'downloads')
-    if not os.path.exists(downloads_dir):
-        os.makedirs(downloads_dir)
-    last_value = video_url.split('/')[-1]
-    output_filename = os.path.join(downloads_dir, f'downloaded_meeting_{last_value}.mp4')
-    return output_filename
+async def get_video_source_by_puppeteer(url):
+    browser = await launch(headless=True)
+    page = await browser.newPage()
+    await page.goto(url, {'waitUntil': 'networkidle2'})
+
+    # 獲取視頻源地址
+    filelink = await page.evaluate('window._filelink')
+    logger.info("視頻源地址：", filelink)
+
+    await browser.close()
+    return filelink
+
+def download(video_url):
+    logger.info(f"開始下載視頻：{video_url}")
+    video_id = video_url.split('/')[-1]
+    video_path = get_path('downloads', video_id, 'mp4')
+    """
+    # using chrome to get video source
+
+    m3u8_url = get_video_source(video_url)
+    if not m3u8_url:
+        logger.info("Failed to get video source")
+        sys.exit(1)
+    """
+    try:
+        loop = asyncio.get_event_loop()
+        m3u8_url = loop.run_until_complete(get_video_source_by_puppeteer(video_url))
+        if not m3u8_url:
+            logger.info("Failed to get video source")
+            sys.exit(1)
+    except Exception as e:
+        logger.info(f"Error during fetching video source: {e}")
+        sys.exit(1)
+    logger.info(f"Downloading video from {m3u8_url} to {video_path}")
+    download_thread = threading.Thread(target=download_video, args=(m3u8_url, video_path))
+    download_thread.start()
+    download_thread.join()
+
+    if not os.path.exists(video_path):
+        logger.error(f"Failed to download video from {video_path}")
+        sys.exit(1)
+    else:
+        logger.info(f"Video downloaded successfully from {video_path}")

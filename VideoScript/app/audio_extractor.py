@@ -6,7 +6,7 @@ import noisereduce as nr
 from .utils import setup_logger, get_path
 
 # 設置 logger
-logger = setup_logger('audio_extractor', 'audio_extractor.log')
+logger = setup_logger('audio_extractor', 'output.log')
 
 def extract_audio(video_path, audio_path):
     """

@@ -8,7 +8,7 @@ asteroid-filterbanks==0.4.0
 astunparse==1.6.3
 attrs==23.2.0
 audioread==3.0.1
-av==12.2.0
+av==11.0.0
 blinker==1.8.2
 certifi==2024.7.4
 cffi==1.16.0
@@ -22,7 +22,7 @@ cycler==0.12.1
 decorator==5.1.1
 docopt==0.6.2
 einops==0.8.0
-faster-whisper==1.0.3
+faster-whisper==1.0.1
 ffmpeg-python==0.2.0
 filelock==3.15.4
 Flask==3.0.3
@@ -140,7 +140,7 @@ tensorflow-io-gcs-filesystem==0.37.1
 termcolor==2.4.0
 threadpoolctl==3.5.0
 tifffile==2024.7.2
-tokenizers==0.19.1
+tokenizers==0.15.2
 torch==2.2.2
 torch-audiomentations==0.11.1
 torch-pitch-shift==1.2.4
@@ -148,7 +148,7 @@ torchaudio==2.2.2
 torchmetrics==1.4.0.post0
 torchvision==0.17.2
 tqdm==4.66.4
-transformers==4.42.3
+transformers==4.39.3
 trio==0.25.1
 trio-websocket==0.11.1
 typer==0.12.3
@@ -159,7 +159,7 @@ webdriver-manager==4.0.1
 websocket-client==1.8.0
 websockets==10.4
 Werkzeug==3.0.3
-whisperx==3.1.2
+whisperx==3.1.5
 wrapt==1.16.0
 wsproto==1.2.0
 xarray==2024.6.0

@@ -1,5 +1,3 @@
-# run.py
-
 import sys
 import os
 import argparse
@@ -20,7 +18,7 @@ def download_if_needed(video_id):
     if not os.path.exists(video_path):
         logger.info(f"Video not found, please download video first")
         sys.exit(1)
-        
+    return video_path
 
 def extract_audio_if_needed(video_path, video_id):
     audio_path = get_path('audios', f'{video_id}.wav')
@@ -51,15 +49,16 @@ def optimize_if_needed(transcript_path, video_id):
     return optimized_path
 
 if __name__ == '__main__':
-    # app.run(debug=True)
-
-    if len(sys.argv) > 1:
+    if any(cmd in sys.argv for cmd in ['extract', 'process', 'transcribe', 'optimize']):
         if len(sys.argv) < 3:
-            logger.info(f"Usage: python script.py download <video_url> or use default video url {video_url}")
+            logger.info(f"Usage: python run.py <command> <video_url> or use default video URL {video_url}")
+            sys.exit(1)
         else:
             video_url = sys.argv[2]
         video_id = video_url.split('/')[-1]
 
+        logger.info(f"Received command: {sys.argv[1]} with video URL: {video_url}")
+        
         if 'extract' in sys.argv:
             video_path = download_if_needed(video_id)
             extract_audio_if_needed(video_path, video_id)
@@ -83,15 +82,16 @@ if __name__ == '__main__':
             optimize_if_needed(transcript_path, video_id)
             
         else:
-            print("Invalid command")
+            logger.error(f"Invalid sys.argv: {sys.argv}")
+            print("Invalid sys.argv")
+            sys.exit(1)
     else:
         parser = argparse.ArgumentParser(description='Run the Flask app.')
         parser.add_argument('--port', type=int, default=5001, help='Port to run the Flask app on.')
         args = parser.parse_args()
 
         port = args.port
+        logger.info(f"Starting app on port {port}")
         print(f"Starting app on port {port}")
 
-        
-
-        app.run(host='0.0.0.0', port= args.port, debug=True)
+        app.run(host='0.0.0.0', port=port, debug=True)

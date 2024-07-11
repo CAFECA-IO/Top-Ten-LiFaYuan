@@ -48,12 +48,19 @@ for i in "${!PROJECT_NAMES[@]}"; do
     PORT=${PROJECT_PORTS[$i]}
     PROJECT_PATH="./$project"
     VENV_PATH="$PROJECT_PATH/venv"
+    OUTPUT_LOG=$(pwd)/"$PROJECT_PATH/output.log"
 
     echo "Setting up and starting $project on port $PORT..."
 
     # 檢查專案資料夾是否存在
     if [ ! -d "$PROJECT_PATH" ]; then
         echo "Project path $PROJECT_PATH does not exist"
+        exit 1
+    fi
+
+    # 確保有寫入許可權
+    if [ ! -w "$PROJECT_PATH" ];then
+        echo "No write permission for $PROJECT_PATH"
         exit 1
     fi
 
@@ -85,11 +92,16 @@ for i in "${!PROJECT_NAMES[@]}"; do
         exit 1
     fi
 
-    OUTPUT_LOG="$PROJECT_PATH/output.log"
     echo "Creating output.log at $OUTPUT_LOG"
     touch "$OUTPUT_LOG"
     if [ $? -ne 0 ]; then
         echo "Failed to create log file for $project at $OUTPUT_LOG"
+        exit 1
+    fi
+
+    # 檢查 output.log 是否存在且可寫
+    if [ ! -f "$OUTPUT_LOG" ] || [ ! -w "$OUTPUT_LOG" ]; then
+        echo "Log file $OUTPUT_LOG does not exist or is not writable"
         exit 1
     fi
 
@@ -114,6 +126,7 @@ for i in "${!PROJECT_NAMES[@]}"; do
     cd -  # 返回腳本執行目錄
     sleep 1  # 延遲一秒以確保每個專案有時間啟動
 
+    # 檢查端口是否在使用中
     if lsof -i:$PORT > /dev/null; then
         echo "$project started successfully on port $PORT"
     else

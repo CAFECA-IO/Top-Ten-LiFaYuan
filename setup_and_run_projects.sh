@@ -43,6 +43,11 @@ check_port() {
     fi
 }
 
+terminate_previous_process() {
+    local port=$1
+    lsof -t -i:$port | xargs kill -9
+}
+
 for i in "${!PROJECT_NAMES[@]}"; do
     project=${PROJECT_NAMES[$i]}
     PORT=${PROJECT_PORTS[$i]}
@@ -59,7 +64,7 @@ for i in "${!PROJECT_NAMES[@]}"; do
     fi
 
     # 確保有寫入許可權
-    if [ ! -w "$PROJECT_PATH" ];then
+    if [ ! -w "$PROJECT_PATH" ]; then
         echo "No write permission for $PROJECT_PATH"
         exit 1
     fi
@@ -105,13 +110,17 @@ for i in "${!PROJECT_NAMES[@]}"; do
         exit 1
     fi
 
-    ls -l "$PROJECT_PATH"  # 列出項目目錄內容，確認 output.log 是否創建成功
+    echo "Current working directory: $(pwd)"
+    echo "Checking directory permissions..."
+    ls -ld "$(pwd)"
+    ls -ld "$PROJECT_PATH"
 
-    pwd
-    env | grep PYTHONPATH
+    echo "Checking file permissions for output.log..."
+    ls -l "$OUTPUT_LOG"
 
     while ! check_port $PORT; do
         echo "Port $PORT is in use. Trying a new port..."
+        terminate_previous_process $PORT
         PORT=$((PORT+1))
     done
 
@@ -119,15 +128,10 @@ for i in "${!PROJECT_NAMES[@]}"; do
     cd "$PROJECT_PATH"
     echo "Command: nohup python run.py --port $PORT >> $OUTPUT_LOG 2>&1 &"
     nohup python run.py --port "$PORT" >> "$OUTPUT_LOG" 2>&1 &
-    if [ $? -ne 0 ]; then
-        echo "Failed to start $project"
-        exit 1
-    fi
-    cd -  # 返回腳本執行目錄
-    sleep 1  # 延遲一秒以確保每個專案有時間啟動
+    sleep 3  # 延遲三秒以確保每個專案有時間啟動
 
-    # 檢查端口是否在使用中
-    if lsof -i:$PORT > /dev/null; then
+    # 檢查進程是否已經啟動
+    if pgrep -f "python run.py --port $PORT" > /dev/null; then
         echo "$project started successfully on port $PORT"
     else
         echo "Failed to start $project on port $PORT"
@@ -135,6 +139,8 @@ for i in "${!PROJECT_NAMES[@]}"; do
         cat "$OUTPUT_LOG"
         exit 1
     fi
+
+    cd -  # 返回腳本執行目錄
 done
 
 echo "All projects started. Press Ctrl+C to stop."

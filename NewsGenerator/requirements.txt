@@ -1,0 +1,6 @@
+requests
+diffusers
+torch
+transformers
+torchaudio
+bark

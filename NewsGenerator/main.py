@@ -1,29 +1,34 @@
-from scripts.generate_news_script import generate_news_script
+import torch
+# from scripts.generate_news_script import generate_news_script
 from scripts.generate_storyboard_images import generate_storyboard_images
-from scripts.generate_anchor_image import generate_anchor_image
-from scripts.generate_animation import generate_animation_from_images
+# from scripts.generate_anchor_image import generate_anchor_image
+# from scripts.generate_animation import generate_animation_from_images
 # from scripts.generate_anchor_animation import generate_anchor_animation
 # from scripts.generate_voiceover import generate_voiceover
 # from scripts.generate_background_music import generate_background_music
 # from scripts.combine_media import combine_media
 
-def create_news_broadcast(summary):
-    script_path = generate_news_script(summary)
-    if not script_path:
-        return
+torch.set_default_dtype(torch.float32)
+torch.set_default_device("cpu")
 
+def create_news_broadcast(summary):
+#     script_path = generate_news_script(summary)
+#     if not script_path:
+#         return
+
+    script_path = 'data/output/news_script.txt'
     image_paths = generate_storyboard_images(script_path)
     if not image_paths:
         return
 
-    anchor_image_paths = generate_anchor_image(summary)
-    if not anchor_image_paths:
-        return
+    # anchor_image_paths = generate_anchor_image()
+    # if not anchor_image_paths:
+    #     return
 
     # 使用 generate_animation_from_images 來生成整個新聞播報的動畫，基於分鏡稿圖片生成動畫片段。
-    animation_paths = generate_animation_from_images(image_paths)
-    if not animation_paths:
-        return
+    # animation_paths = generate_animation_from_images(image_paths)
+    # if not animation_paths:
+    #     return
 
     # voiceover_path = generate_voiceover(script_path)
     # if not voiceover_path:

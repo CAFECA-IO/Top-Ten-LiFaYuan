@@ -1,6 +1,10 @@
 requests
 diffusers
-torch
 transformers
-torchaudio
 bark
+torch 
+torchvision 
+torchaudio
+accelerate
+modelscope
+sentencepiece

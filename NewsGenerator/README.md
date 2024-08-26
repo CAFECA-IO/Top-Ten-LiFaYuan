@@ -40,12 +40,26 @@
    conda activate newsgenerator
    ```
 
+   2.1 **刪除虛擬環境**
+
+   ```bash
+   conda deactivate
+   conda remove --name newsgenerator --all     
+   ```
+
 3. **安裝依賴項**
 
    安裝專案所需的所有 Python 庫：
 
    ```bash
+   <!-- conda install pytorch torchvision -c pytorch -->
    pip install -r requirements.txt
+   ```
+
+   卸載所有安裝包:
+
+   ```bash
+   pip freeze | xargs pip uninstall -y
    ```
 
 ### 4. 在 `NewsGenerator` 專案中克隆 CosyVoice

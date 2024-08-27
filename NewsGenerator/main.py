@@ -1,29 +1,34 @@
-from scripts.generate_news_script import generate_news_script
-from scripts.generate_storyboard_images import generate_storyboard_images
-from scripts.generate_anchor_image import generate_anchor_image
-from scripts.generate_animation import generate_animation_from_images
-# from scripts.generate_anchor_animation import generate_anchor_animation
-# from scripts.generate_voiceover import generate_voiceover
+# from scripts.generate_news_script import generate_news_script
+# from scripts.generate_storyboard_images import generate_storyboard_images
+# from scripts.generate_anchor_image import generate_anchor_image
+# from scripts.generate_animation import generate_animation_from_images
+from scripts.generate_anchor_animation import generate_anchor_animation
 # from scripts.generate_background_music import generate_background_music
 # from scripts.combine_media import combine_media
+import sys
+sys.path.append('/Users/tzuhanliang/workspace/Top-Ten-LiFaYuan/CosyVoice')
+
+from scripts.generate_voiceover import generate_voiceover
+
+script_path = 'data/output/news_script.txt'
 
 def create_news_broadcast(summary):
-    script_path = generate_news_script(summary)
-    if not script_path:
-        return
+#     script_path = generate_news_script(summary)
+#     if not script_path:
+#         return
 
-    image_paths = generate_storyboard_images(script_path)
-    if not image_paths:
-        return
+    # image_paths = generate_storyboard_images(script_path)
+    # if not image_paths:
+    #     return
 
-    anchor_image_paths = generate_anchor_image(summary)
-    if not anchor_image_paths:
-        return
+    # anchor_image_paths = generate_anchor_image()
+    # if not anchor_image_paths:
+    #     return
 
     # 使用 generate_animation_from_images 來生成整個新聞播報的動畫，基於分鏡稿圖片生成動畫片段。
-    animation_paths = generate_animation_from_images(image_paths)
-    if not animation_paths:
-        return
+    # animation_paths = generate_animation_from_images(image_paths)
+    # if not animation_paths:
+    #     return
 
     # voiceover_path = generate_voiceover(script_path)
     # if not voiceover_path:
@@ -33,10 +38,10 @@ def create_news_broadcast(summary):
     # if not background_music_path:
     #     return
 
-    # # 使用 generate_anchor_animation 來生成基於主播圖片和語音的動畫，這樣動畫的重點將是主播與新聞講稿的同步呈現。
-    # anchor_animation_path = generate_anchor_animation(anchor_image_paths, voiceover_path)
-    # if not anchor_animation_path:
-    #     return
+    # 使用 generate_anchor_animation 來生成基於主播圖片和語音的動畫，這樣動畫的重點將是主播與新聞講稿的同步呈現。
+    anchor_animation_path = generate_anchor_animation(anchor_image_paths, voiceover_path)
+    if not anchor_animation_path:
+        return
 
     # # 有兩種視頻片段可以進行合成 animations 和 anchor_animation 
     # combine_media(anchor_animation_path, voiceover_path, background_music_path)

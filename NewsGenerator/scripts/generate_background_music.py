@@ -9,7 +9,10 @@ def generate_background_music(script_path):
             
         preload_models()  # 預加載模型
 
-        audio_array = generate_audio(script)
+        with torch.no_grad():  # 禁用梯度计算以加速推理
+            audio_array = generate_audio(script)
+
+        # audio_array = generate_audio(script)
 
          # 保存生成的背景音樂
         output_path = 'data/output/background_music.wav'

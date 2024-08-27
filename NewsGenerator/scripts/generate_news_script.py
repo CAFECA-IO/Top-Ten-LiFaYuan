@@ -1,5 +1,6 @@
 import requests
 import json
+import os
 
 def extract_text_from_responses(response_content):
     # 將字符串拆分為獨立的 JSON 對象
@@ -30,6 +31,9 @@ def generate_news_script(summary):
         
         script = extract_text_from_responses(response.text)
         output_path = 'data/output/news_script.txt'
+        
+        # 確保目錄存在
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
         # 將生成的新聞稿保存到 output 文件夾
         with open(output_path, 'w') as f:

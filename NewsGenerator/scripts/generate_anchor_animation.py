@@ -1,4 +1,5 @@
 import torch
+import os
 from diffusers import AnimateDiffPipeline, DDIMScheduler, MotionAdapter
 from diffusers.utils import export_to_gif
 
@@ -40,8 +41,13 @@ def generate_anchor_animation(anchor_image_path, voiceover_path):
 
         # 保存生成的動畫
         output_path = 'data/output/anchor_animation.mp4'
+        
+        # 確保目錄存在
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        
         if output.frames:
             export_to_gif(output.frames[0], output_path)  # 如果需要保存為GIF
+            print(f"已保存生成的主播動畫: {output_path}")
         else:
             print("未生成任何動畫幀。")
         

@@ -1,4 +1,5 @@
 import torch
+import os
 from diffusers import AnimateDiffSparseControlNetPipeline, AutoencoderKL, MotionAdapter, SparseControlNetModel, DPMSolverMultistepScheduler
 from diffusers.utils import export_to_gif, load_image
 
@@ -58,6 +59,9 @@ def generate_animation_from_images(image_paths):
 
         # 保存生成的動畫
         output_path = 'data/output/generated_animation.gif'
+        # 確保目錄存在
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
         export_to_gif(video, output_path)
 
         print(f"已保存生成的動畫: {output_path}")

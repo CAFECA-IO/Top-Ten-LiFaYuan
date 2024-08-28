@@ -1,4 +1,4 @@
-from bark import SAMPLE_RATE, generate_audio, preload_models
+from bark_suno import SAMPLE_RATE, generate_audio, preload_models
 import torchaudio
 import torch
 import os

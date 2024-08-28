@@ -1,18 +1,27 @@
-from diffusers import DiffusionPipeline
+from diffusers import FluxPipeline # 將 DiffusionPipeline 替換為 FluxPipeline
 import torch
 import os
 
-def load_model():
-    try:
-        print("開始加載 FLUX.1 [schnell] 模型...")
-        pipe = DiffusionPipeline.from_pretrained("black-forest-labs/FLUX.1-schnell", torch_dtype=torch.bfloat16) # 使用 bfloat16 以減少內存占用
-        pipe.to("cpu")  # 明確指定使用 CPU
-        pipe.enable_model_cpu_offload()  # 使用 accelerate 來優化 CPU 記憶體使用
-        print("模型加載成功。")
-        return pipe
-    except Exception as e:
-        print(f"加載模型時出錯: {e}")
-        return None
+class ModelManager:
+    _pipe = None
+
+    @classmethod
+    def get_pipeline(cls):
+        if cls._pipe is None:
+            print("開始加載 FLUX.1 [schnell] 模型...")
+            cls._pipe = FluxPipeline.from_pretrained("black-forest-labs/FLUX.1-schnell", torch_dtype=torch.bfloat16)
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            cls._pipe.to(device)
+            cls._pipe.enable_attention_slicing()
+            print("模型加載成功。")
+        return cls._pipe
+
+def generate_prompt_from_script(script):
+    lines = script.strip().splitlines()
+    non_empty_lines = [line.strip() for line in lines if line.strip()]
+    prompt = " ".join(non_empty_lines)
+    return prompt
+
 
 def generate_storyboard_images(script_path):
     try:
@@ -22,18 +31,17 @@ def generate_storyboard_images(script_path):
         with open(script_path, 'r') as file:
             script = file.read().strip()
 
-        # 限制文本長度到模型的最大序列長度
-        max_length = 38
-        if len(script) > max_length:
-            script = script[:max_length].rsplit(' ', 1)[0]  # 確保不會在句子中間截斷
+        script = generate_prompt_from_script(script)
+            
+        print(f"生成分鏡稿圖片: {script}")
 
-        pipe = load_model()
+        pipe = ModelManager.get_pipeline()
         if pipe is None:
             print("模型加載失敗，終止生成圖片。")
             return []
 
         # 生成分鏡稿圖片
-        images = pipe(script, guidance_scale=0.0, num_inference_steps=2).images
+        images = pipe(script, guidance_scale=7.5, num_inference_steps=50).images
         
         # 確保輸出目錄存在
         os.makedirs('data/output', exist_ok=True)
@@ -49,3 +57,6 @@ def generate_storyboard_images(script_path):
     except Exception as e:
         print(f"生成分鏡稿圖片時出錯: {e}")
         return []
+
+
+generate_storyboard_images('data/output/news_script.txt')

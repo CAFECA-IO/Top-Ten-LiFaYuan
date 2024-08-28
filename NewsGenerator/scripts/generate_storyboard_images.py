@@ -1,4 +1,4 @@
-from diffusers import FluxPipeline # 將 DiffusionPipeline 替換為 FluxPipeline
+from diffusers import FluxPipeline
 import torch
 import os
 
@@ -19,9 +19,12 @@ class ModelManager:
 def generate_prompt_from_script(script):
     lines = script.strip().splitlines()
     non_empty_lines = [line.strip() for line in lines if line.strip()]
-    prompt = " ".join(non_empty_lines)
-    return prompt
-
+    prompts = []
+    # 為每一行生成提示並添加風格
+    for line in non_empty_lines:
+        prompt = f"Generate a professional illustration in a consistent minimalist style depicting the following content: {line}"
+        prompts.append(prompt)
+    return prompts
 
 def generate_storyboard_images(script_path):
     try:
@@ -31,23 +34,23 @@ def generate_storyboard_images(script_path):
         with open(script_path, 'r') as file:
             script = file.read().strip()
 
-        script = generate_prompt_from_script(script)
+        prompts = generate_prompt_from_script(script)
             
-        print(f"生成分鏡稿圖片: {script}")
+        print(f"生成分鏡稿圖片的提示列表: {prompts}")
 
         pipe = ModelManager.get_pipeline()
         if pipe is None:
             print("模型加載失敗，終止生成圖片。")
             return []
 
-        # 生成分鏡稿圖片
-        images = pipe(script, guidance_scale=7.5, num_inference_steps=50).images
-        
-        # 確保輸出目錄存在
+        # 确保输出目录存在
         os.makedirs('data/output', exist_ok=True)
-        
+
         output_paths = []
-        for i, image in enumerate(images):
+        for i, prompt in enumerate(prompts):
+            print(f"正在生成图片: {prompt}")
+            # 使用更多的推理步數來提高圖片質量
+            image = pipe(prompt, guidance_scale=7.5, num_inference_steps=100).images[0]
             output_path = f'data/output/storyboard_image_{i+1}.png'
             image.save(output_path)
             output_paths.append(output_path)
@@ -58,5 +61,5 @@ def generate_storyboard_images(script_path):
         print(f"生成分鏡稿圖片時出錯: {e}")
         return []
 
-
+# 執行腳步，生成分鏡稿圖片
 generate_storyboard_images('data/output/news_script.txt')

@@ -2,7 +2,20 @@ from diffusers import FluxPipeline
 import torch
 import os
 import re
+import time
+from googletrans import Translator
 
+def translate_with_retry(text, retries=3):
+    for attempt in range(retries):
+        try:
+            return translator.translate(text, src='zh-CN', dest='en')
+        except Exception as e:
+            print(f"Attempt {attempt + 1} failed: {e}")
+            time.sleep(2)  # wait before retrying
+    return None
+
+# Initialize the translator
+translator = Translator()
 class ModelManager:
     _pipe = None
 
@@ -25,9 +38,17 @@ def generate_prompt_from_script(script):
     for sentence in sentences:
         clean_sentence = sentence.strip()
         if clean_sentence:
-            # 生成針對每個句子的 prompt
-            prompt = f"Generate a professional illustration in a consistent minimalist style depicting the following content: {clean_sentence}"
-            prompts.append(prompt)
+            try:
+                translated = translate_with_retry(clean_sentence)
+                print(f"Original: {clean_sentence}, Translated: {translated.text if translated else 'None'}")
+                if translated and translated.text:
+                    prompt = f"Generate a professional illustration in a consistent minimalist style depicting the following content: {translated.text}"
+                    prompts.append(prompt)
+                else:
+                    print(f"Translation failed for sentence: {clean_sentence}")
+            except Exception as e:
+                print(f"Error during translation: {e}")
+                continue
 
     return prompts
 

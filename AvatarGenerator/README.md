@@ -71,7 +71,7 @@ POST /generate-avatar-by-image
 **範例請求：**
 
 ```bash
-curl -X POST "http://localhost:5000/generate-avatar-by-image" \
+curl -X POST "http://127.0.0.1:5000/generate-avatar-by-image" \
   -H "Content-Type: application/json" \
   -d '{
     "imageName": "your_uploaded_image.jpg",

@@ -6,5 +6,9 @@ torch
 torchvision 
 torchaudio
 accelerate
-modelscope
 sentencepiece
+protobuf
+peft
+googletrans==4.0.0-rc1
+pillow
+moviepy

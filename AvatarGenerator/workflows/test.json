@@ -1,0 +1,63 @@
+{
+  "1": {
+    "inputs": { "ckpt_name": "dreamshaper_8.safetensors" },
+    "class_type": "CheckpointLoaderSimple"
+  },
+  "2": {
+    "inputs": {
+      "text": "soft lighting, gentle shadows, pastel color palette, slight 3D effect on the face and hair, delicate facial features, blurred grey background,",
+      "clip": ["1", 1]
+    },
+    "class_type": "CLIPTextEncode"
+  },
+  "3": {
+    "inputs": {
+      "text": "ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs, disfigured, deformed, body out of frame, bad anatomy, watermark, signature, cut off, low contrast, underexposed, overexposed, bad art, beginner, amateur, distorted face, animal-human hybrid, anthropomorphic, creature with human features, chimera, mixed species, human-animal mutation, deformed eyes, extra eyes, poorly drawn eyes, distorted eyes, asymmetrical eyes, misaligned eyes",
+      "clip": ["1", 1]
+    },
+    "class_type": "CLIPTextEncode"
+  },
+  "4": {
+    "inputs": {
+      "seed": 0,
+      "steps": 70,
+      "cfg": 6,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "denoise": 0.6,
+      "model": ["1", 0],
+      "positive": ["23", 0],
+      "negative": ["3", 0],
+      "latent_image": ["26", 0]
+    },
+    "class_type": "KSampler"
+  },
+  "5": {
+    "inputs": { "width": 512, "height": 512, "batch_size": 1 },
+    "class_type": "EmptyLatentImage"
+  },
+  "7": { "inputs": { "images": ["15", 0] }, "class_type": "PreviewImage" },
+  "15": {
+    "inputs": { "samples": ["4", 0], "vae": ["1", 2] },
+    "class_type": "VAEDecode"
+  },
+  "22": {
+    "inputs": {
+      "text": "best quality, masterpiece, avatar, facing forward, looking at the camera, symmetrical face, relaxed body posture,",
+      "clip": ["1", 1]
+    },
+    "class_type": "CLIPTextEncode"
+  },
+  "23": {
+    "inputs": { "conditioning1": ["22", 0], "conditioning2": ["2", 0] },
+    "class_type": "ImpactConcatConditionings"
+  },
+  "25": {
+    "inputs": { "image": "profile_emily.png", "upload": "image" },
+    "class_type": "LoadImage"
+  },
+  "26": {
+    "inputs": { "pixels": ["25", 0], "vae": ["1", 2] },
+    "class_type": "VAEEncode"
+  }
+}

@@ -81,7 +81,29 @@ curl -X POST "http://127.0.0.1:5000/generate-avatar-by-image" \
   }'
 ```
 
-### 4. 使用 ComfyUI Prompt Queue
+### 4. 生成影片
+
+**API 路徑：**
+
+```api
+POST /generate-video
+```
+
+**範例請求：**
+
+```bash
+curl -X POST http://localhost:5000/generate-video \
+-H "Content-Type: application/json" \
+-d '{
+    "video_description": {
+        "0": "A happy panda starts spinning in circles, full of energy.",
+        "6": "After a few spins, the panda jumps up with excitement, still smiling.",
+        "9": "Landing gracefully, the panda continues to spin happily in place."
+    }
+}'
+```
+
+### 5. 使用 ComfyUI Prompt Queue
 
 使用 ComfyUI 完成工作流程後，你可以使用 prompt queue 來生成並發送 prompt。要找到生成的 prompt，請按以下步驟操作：
 
@@ -167,7 +189,7 @@ curl -X POST "http://127.0.0.1:5000/generate-avatar-by-image" \
 
 將這些 prompt 作為生成圖像的內容發送至 ComfyUI 或其他圖像生成系統。
 
-### 5. 圖片儲存
+### 6. 圖片儲存
 
 生成的圖像將被保存到本地資料夾 `./generated_avatar`。你可以在 ComfyUIClient 類的 `save_images` 方法中修改圖片儲存位置。若指定了 `upload_url`，則會自動將圖片上傳到該 URL。
 

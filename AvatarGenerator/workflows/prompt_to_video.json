@@ -1,7 +1,7 @@
 {
   "2": {
     "inputs": {
-      "seed": 727550162891495,
+      "seed": 397516155773816,
       "steps": 20,
       "cfg": 7,
       "sampler_name": "ddpm",
@@ -100,7 +100,7 @@
   },
   "28": {
     "inputs": {
-      "seed": 1042057798692647,
+      "seed": 650122469959129,
       "steps": 25,
       "cfg": 8.5,
       "sampler_name": "ddpm",

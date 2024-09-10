@@ -7,14 +7,19 @@ import urllib.parse
 from PIL import Image
 import io
 import mimetypes
+from flask import jsonify
+import logging
+
+# 設置日誌格式和級別
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class ComfyUIClient:
     def __init__(self, server_address):
         """初始化 ComfyUI 客戶端"""
         self.server_address = server_address
         self.client_id = str(uuid.uuid4())
-        
-    def get_video(self, video_description, width=512, height=512, frame_rate=8):
+
+    def get_video(self, video_description, frame_rate=8):
         """
         使用 WebSocket 發送生成影片的請求，並根據 promptId 獲取歷史結果下載影片。
         
@@ -28,52 +33,44 @@ class ComfyUIClient:
         - 影片的位元資料（bytes），若失敗則返回 None。
         """
         try:
-            # 讀取工作流配置
-            workflow_path = './workflows/prompt_to_video.json'
-            with open(workflow_path, 'r') as file:
-                workflow = json.load(file)
-
-            # 動態替換工作流中的動畫描述部分
-            workflow["8"]["inputs"]["text"] = video_description
-
-            # 使用 WebSocket 進行連接
-            ws = websocket.WebSocket()
-            ws.connect(f"ws://{self.server_address}/ws?clientId={self.client_id}")
-            print(f"Connected to ws://{self.server_address}/ws?clientId={self.client_id}")
-
-            # 發送提示並獲取 prompt_id
+            workflow = self._load_workflow('./workflows/prompt_to_video.json')
+            
+            # logging.info(f"Generating video with description: {json.dump(video_description)}")
+            # workflow["8"]["inputs"]["text"] = json.dump(video_description) # 動態替換動畫描述
+            # workflow["7"]["inputs"]["frame_rate"] = frame_rate  # 更新幀率
+            
+            """根據 prompt 通過 WebSocket 獲取生成的圖片"""
+            ws = self._create_websocket()  # 手動創建 WebSocket 連接
+            
             prompt_id = self.queue_prompt(workflow)['prompt_id']
-            print(f"Prompt ID: {prompt_id}")
-
-            # 監控生成過程，直到任務完成
-            while True:
-                out = ws.recv()
-                if isinstance(out, str):
-                    message = json.loads(out)
-                    if message['type'] == 'executing' and message['data']['node'] is None:
-                        break  # 任務執行完成
-
-            # 獲取生成的歷史結果
-            history = self.get_history(prompt_id)[prompt_id]
-            for node_id in history['outputs']:
-                node_output = history['outputs'][node_id]
-                if 'gifs' in node_output:
-                    video_filename = node_output['gifs'][0]['filename']
-                    print(f"影片生成成功: {video_filename}")
-                    
-                    # 下載影片
-                    return self.fetch_video(video_filename)
-
-            print("未能找到影片輸出。")
-            return None
+            logging.info(f"Prompt ID: {prompt_id}")
+            self._wait_for_completion(ws)  # 等待完成
+            return self._get_output_video(prompt_id)
 
         except Exception as e:
-            print(f"生成影片時發生錯誤: {e}")
+            logging.error(f"生成影片時發生錯誤: {e}")
+            return None
+        
+        finally:
+            ws.close()
+
+    def upload_image(self, file_path, file_name):
+        """
+        將圖片上傳至伺服器。
+        
+        參數:
+        - file_path: 圖片文件的路徑。
+        - file_name: 上傳時的文件名。
+        """
+        try:
+            return self._upload_file(file_path, file_name, 'upload/image')
+        except Exception as e:
+            logging.error(f"上傳圖片時發生錯誤: {e}")
             return None
 
     def fetch_video(self, filename, subfolder='', file_type='temp', format='video/h264-mp4', frame_rate=8, force_size='835.406x?', output_dir='./generated_videos'):
         """
-        通過參數化的 API 請求視頻並保存到指定目錄
+        通過參數化的 API 請求下載影片並保存到指定目錄。
 
         參數:
         - filename (必須): 視頻的文件名，例如 'AnimateDiff_00007.mp4'。
@@ -84,170 +81,31 @@ class ComfyUIClient:
         - force_size (可選): 視頻的尺寸，默認為 '835.406x?'。
         - output_dir (可選): 保存視頻的目錄，默認為 './generated_videos'。
 
-        返回值:
-        - 視頻數據和內容類型，若失敗則返回 None。
-        """
-        # 構建 API 的基礎 URL
-        url = f"http://{self.server_address}/api/viewvideo"
-        
-        # 組合查詢參數
-        params = {
-            'filename': filename,  # 必須提供的視頻文件名
-            'subfolder': subfolder,
-            'type': file_type,
-            'format': format,      # 必須提供的視頻格式
-            'frame_rate': frame_rate,
-            'force_size': force_size
-        }
-        
-        # 將參數編碼為 URL 格式
-        url_values = urllib.parse.urlencode(params)
-        full_url = f"{url}?{url_values}"
-        print(f"正在請求視頻: {full_url}")
-
-        try:
-            # 發出 HTTP GET 請求並獲取響應
-            with urllib.request.urlopen(full_url) as response:
-                video_data = response.read()
-                content_type = response.headers.get('content-type')
-                
-                # 確保指定的目錄存在
-                self.ensure_directory(output_dir)
-                
-                # 構建文件保存路徑
-                output_filepath = os.path.join(output_dir, filename)
-                
-                # 將視頻保存到指定的文件
-                with open(output_filepath, 'wb') as f:
-                    f.write(video_data)
-                
-                print(f"視頻已保存到 {output_filepath}")
-                return output_filepath, content_type
-        except Exception as e:
-            print(f"請求視頻時發生錯誤: {e}")
-            return None, None
-
-
-    def load_prompt(self, filepath):
-        """從指定路徑加載 prompt 檔案"""
-        with open(filepath, 'r', encoding='utf-8') as f:
-            return json.load(f)
-
-    def queue_prompt(self, prompt):
-        """將生成任務排隊"""
-        p = {"prompt": prompt, "client_id": self.client_id}
-        data = json.dumps(p).encode('utf-8')
-        req = urllib.request.Request(f"http://{self.server_address}/prompt", data=data)
-        print(f"提交生成任務: http://{self.server_address}/prompt")
-        return json.loads(urllib.request.urlopen(req).read())
-
-    def get_image(self, filename, subfolder, folder_type):
-        """根據檔名、子資料夾及類型獲取生成的圖片"""
-        data = {"filename": filename, "subfolder": subfolder, "type": folder_type}
-        url_values = urllib.parse.urlencode(data)
-        with urllib.request.urlopen(f"http://{self.server_address}/view?{url_values}") as response:
-            return response.read()
-
-    def get_history(self, prompt_id):
-        """通過 prompt_id 獲取生成歷史"""
-        with urllib.request.urlopen(f"http://{self.server_address}/history/{prompt_id}") as response:
-            return json.loads(response.read())
-
-    def ensure_directory(self, directory):
-        """確保指定的資料夾存在，若不存在則創建"""
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
-    def get_images(self, prompt):
-        """根據 prompt 通過 WebSocket 獲取生成的圖片"""
-        ws = websocket.WebSocket()
-        ws.connect(f"ws://{self.server_address}/ws?clientId={self.client_id}")
-        print(f"Connected to ws://{self.server_address}/ws?clientId={self.client_id}")
-        prompt_id = self.queue_prompt(prompt)['prompt_id']
-        print(f"Prompt ID: {prompt_id}")
-        output_images = {}
-
-        while True:
-            out = ws.recv()
-            if isinstance(out, str):
-                message = json.loads(out)
-                if message['type'] == 'executing' and message['data']['node'] is None:
-                    break  # 任務執行完成
-
-        history = self.get_history(prompt_id)[prompt_id]
-        for node_id in history['outputs']:
-            node_output = history['outputs'][node_id]
-            images_output = []
-            if 'images' in node_output:
-                for image in node_output['images']:
-                    image_data = self.get_image(image['filename'], image['subfolder'], image['type'])
-                    images_output.append(image_data)
-            output_images[node_id] = images_output
-
-        return output_images
-    
-    def upload_image(self, file_path, file_name):
-        """
-        將圖片上傳。
-        
-        參數:
-        - file_path: 本地圖片文件的路徑
-        - file_name: 上傳時使用的文件名
+        返回:
+        - 影片數據和內容類型，若失敗則返回 None。
         """
         try:
-            # 確定文件的 MIME 類型，如果找不到則默認為 'application/octet-stream'
-            mime_type, _ = mimetypes.guess_type(file_path)
-            if mime_type is None:
-                mime_type = 'application/octet-stream'
-
-            # 打開圖片文件
-            with open(file_path, 'rb') as image_file:
-                # 讀取文件內容
-                image_data = image_file.read()
-
-            # 構建 multipart form-data 的邊界
-            boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW'
-            
-            # 構建 multipart form-data 數據
-            data = (
-                f'--{boundary}\r\n'
-                f'Content-Disposition: form-data; name="image"; filename="{file_name}"\r\n'
-                f'Content-Type: {mime_type}\r\n\r\n'
-                f'{image_data.decode("ISO-8859-1")}\r\n'
-                f'--{boundary}--\r\n'
-            ).encode('ISO-8859-1')
-
-            # 構建請求頭
-            headers = {
-                'Content-Type': f'multipart/form-data; boundary={boundary}',
-                'Content-Length': str(len(data)),
+            params = {
+                'filename': filename,
+                'subfolder': subfolder,
+                'type': file_type,
+                'format': format,
+                'frame_rate': frame_rate,
+                'force_size': force_size
             }
-
-            # 構建請求對象
-            request = urllib.request.Request(f"http://{self.server_address}/upload/image", data=data, headers=headers, method='POST')
-
-            # 發送請求並獲取響應
-            with urllib.request.urlopen(request) as response:
-                response_data = response.read().decode('utf-8')
-                if response.status == 200:
-                    print("圖片上傳成功!")
-                    return response_data
-                else:
-                    print(f"上傳圖片失敗，狀態碼: {response.status}")
-                    return None
-
+            return self._download_file('viewvideo', params, output_dir)
         except Exception as e:
-            print(f"上傳圖片時發生錯誤: {e}")
-            return None
+            logging.error(f"請求視頻時發生錯誤: {e}")
+            return None, None
 
     def save_images(self, images, output_dir='./generated_avatar', upload_url=None):
         """
         將生成的圖片保存到指定資料夾，並選擇性地上傳到指定的 API。
         
         參數:
-        - images: 生成的圖像數據
-        - output_dir: 保存圖片的本地目錄
-        - upload_url: （可選）圖片上傳的 API URL
+        - images: 生成的圖像數據。
+        - output_dir: 保存圖片的本地目錄。
+        - upload_url: 圖片上傳的 API URL（可選）。
         """
         self.ensure_directory(output_dir)
     
@@ -257,14 +115,229 @@ class ComfyUIClient:
                 output_filename = os.path.join(output_dir, f"avatar_{node_id}_{random_id}_{idx}.png")
 
                 try:
-                    # 將圖片保存到本地
+                    # 保存圖片到本地
                     image = Image.open(io.BytesIO(image_data))
                     image.save(output_filename, 'PNG')
-                    print(f"圖片已保存到 {output_filename}")
+                    logging.info(f"圖片已保存到 {output_filename}")
 
-                    # 如果提供了 upload_url，則上傳圖片
+                    # 若提供了上傳 URL，則上傳圖片
                     if upload_url:
-                        self.upload_image(upload_url, output_filename, f"avatar_{random_id}_{idx}.png")
+                        self.upload_image(output_filename, f"avatar_{random_id}_{idx}.png")
 
                 except Exception as e:
-                    print(f"保存圖片失敗: {e}")
+                    logging.error(f"保存圖片失敗: {e}")
+
+    def get_images(self, imageName, gender, width, height):
+        workflow = self.handle_avatar_generation_by_image_workflow(imageName, gender, width, height)
+        
+        """根據 prompt 通過 WebSocket 獲取生成的圖片"""
+        ws = self._create_websocket()  # 手動創建 WebSocket 連接
+        try:
+            prompt_id = self.queue_prompt(workflow)['prompt_id']
+            logging.info(f"Prompt ID: {prompt_id}")
+            self._wait_for_completion(ws)  # 等待完成
+            return self._get_output_images(prompt_id)
+        finally:
+            ws.close()  # 確保 WebSocket 在完成後被正確關閉
+
+    def _load_workflow(self, filepath):
+        """從指定路徑加載工作流配置"""
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            logging.error(f"工作流配置文件未找到: {filepath}")
+            raise
+        except json.JSONDecodeError as e:
+            logging.error(f"工作流配置文件格式錯誤: {e}")
+            raise
+
+    def _upload_file(self, file_path, file_name, endpoint):
+        """私有方法：上傳文件"""
+        mime_type = self._get_mime_type(file_path)
+        with open(file_path, 'rb') as file:
+            file_data = file.read()
+
+        boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW'
+        data = self._create_multipart_form_data(boundary, file_name, mime_type, file_data)
+        headers = self._create_headers_for_upload(boundary, len(data))
+
+        return self._send_post_request(f"http://{self.server_address}/{endpoint}", data, headers)
+
+    def _download_file(self, api, params, output_dir):
+        """私有方法：通用下載文件功能"""
+        url = f"http://{self.server_address}/api/{api}"
+        full_url = f"{url}?{urllib.parse.urlencode(params)}"
+        logging.info(f"正在下載: {full_url}")
+
+        try:
+            with urllib.request.urlopen(full_url) as response:
+                file_data = response.read()
+                content_type = response.headers.get('content-type')
+
+                self.ensure_directory(output_dir)
+                output_filepath = os.path.join(output_dir, params['filename'])
+                with open(output_filepath, 'wb') as f:
+                    f.write(file_data)
+
+                logging.info(f"文件已保存到 {output_filepath}")
+                return output_filepath, content_type
+        except Exception as e:
+            logging.error(f"下載文件時發生錯誤: {e}")
+            return None, None
+
+    def _create_websocket(self):
+        """私有方法: 建立 WebSocket 連接"""
+        ws = websocket.WebSocket()
+        ws.connect(f"ws://{self.server_address}/ws?clientId={self.client_id}")
+        logging.info(f"已連接 WebSocket: ws://{self.server_address}/ws?clientId={self.client_id}")
+        return ws
+
+    def _wait_for_completion(self, ws):
+        """私有方法: 監控任務直到完成"""
+        while True:
+            message = json.loads(ws.recv())
+            logging.debug(f"收到消息: {message}")
+            if message['type'] == 'executing' and message['data']['node'] is None:
+                logging.info("任務完成。")
+                break
+
+    def queue_prompt(self, prompt):
+        """將生成任務排隊"""
+        try:
+            p = {"prompt": prompt, "client_id": self.client_id}
+            data = json.dumps(p).encode('utf-8')
+            req = urllib.request.Request(f"http://{self.server_address}/prompt", data=data)
+            logging.info(f"提交生成任務: http://{self.server_address}/prompt")
+            return json.loads(urllib.request.urlopen(req).read())
+        except Exception as e:
+            logging.error(f"提交生成任務時發生錯誤: {e}")
+            return None
+
+    def get_history(self, prompt_id):
+        """通過 prompt_id 獲取生成歷史"""
+        try:
+            with urllib.request.urlopen(f"http://{self.server_address}/history/{prompt_id}") as response:
+                return json.loads(response.read())
+        except Exception as e:
+            logging.error(f"獲取生成歷史時發生錯誤: {e}")
+            return {}
+
+    def _get_output_video(self, prompt_id):
+        """根據 prompt_id 獲取生成的影片"""
+        history = self.get_history(prompt_id).get(prompt_id, {})
+        for node_id, node_output in history.get('outputs', {}).items():
+            if 'gifs' in node_output:
+                video_filename = node_output['gifs'][0]['filename']
+                logging.info(f"影片生成成功: {video_filename}")
+                return self.fetch_video(video_filename)
+        logging.warning("未找到影片輸出。")
+        return None
+
+    def _get_output_images(self, prompt_id):
+        """根據 prompt_id 獲取生成的圖片"""
+        history = self.get_history(prompt_id).get(prompt_id, {})
+        output_images = {}
+
+        for node_id, node_output in history.get('outputs', {}).items():
+            if 'images' in node_output:
+                images_output = []
+                for image in node_output['images']:
+                    image_data = self.get_image(image['filename'], image['subfolder'], image['type'])
+                    images_output.append(image_data)
+                output_images[node_id] = images_output
+
+        return output_images
+
+    def get_image(self, filename, subfolder, folder_type):
+        """根據檔名、子資料夾及類型獲取生成的圖片"""
+        data = {"filename": filename, "subfolder": subfolder, "type": folder_type}
+        url_values = urllib.parse.urlencode(data)
+        with urllib.request.urlopen(f"http://{self.server_address}/view?{url_values}") as response:
+            return response.read()
+
+    def _get_mime_type(self, file_path):
+        """根據文件路徑獲取 MIME 類型"""
+        mime_type, _ = mimetypes.guess_type(file_path)
+        return mime_type or 'application/octet-stream'
+
+    def _create_multipart_form_data(self, boundary, file_name, mime_type, file_data):
+        """創建 multipart form-data 用於文件上傳"""
+        return (
+            f'--{boundary}\r\n'
+            f'Content-Disposition: form-data; name="file"; filename="{file_name}"\r\n'
+            f'Content-Type: {mime_type}\r\n\r\n'
+            f'{file_data.decode("ISO-8859-1")}\r\n'
+            f'--{boundary}--\r\n'
+        ).encode('ISO-8859-1')
+
+    def _create_headers_for_upload(self, boundary, data_length):
+        """創建上傳文件所需的請求頭"""
+        return {
+            'Content-Type': f'multipart/form-data; boundary={boundary}',
+            'Content-Length': str(data_length),
+        }
+
+    def _send_post_request(self, url, data, headers):
+        """發送 HTTP POST 請求並返回響應"""
+        req = urllib.request.Request(url, data=data, headers=headers, method='POST')
+        with urllib.request.urlopen(req) as response:
+            return response.read()
+
+    def ensure_directory(self, directory):
+        """確保指定的資料夾存在，若不存在則創建"""
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+            logging.info(f"已創建目錄: {directory}")
+            
+    def handle_avatar_generation_by_image_workflow(self, imageName, gender, width, height):
+        workflow = self._load_workflow('./workflows/generate_avatar_by_image.json')
+        
+        if "25" in workflow and "inputs" in workflow["25"] and "image" in workflow["25"]["inputs"]:
+            workflow["25"]["inputs"]["image"] = imageName
+        
+        positive_prompts = "Anime-style portrait, silver hair, soft lighting, delicate facial features, large reflective eyes, high-detailed, serene background"
+        negative_prompts = "Excessive makeup, hyper-realism, distorted anatomy, harsh lighting, exaggerated emotions, overly vibrant or neon colors, blurry or out-of-focus details"
+
+        prompts = {
+            "positive": {
+                "neutral": positive_prompts + ", neutral gender character, medium-length silver hair, casual outdoor clothing, soft shadows",
+                "female": positive_prompts + ", female character, long silver hair with soft waves, sporty jacket, cute expression",
+                "male": positive_prompts + ", male character, medium-length silver hair, sporty jacket with subtle masculine design, sharp but gentle features",
+            },
+            "negative": {
+                "neutral": negative_prompts + ", overly masculine or overly feminine features, extreme age (too young or too old), unnatural or neon-colored hair",
+                "female": negative_prompts + ", highly masculine features, cluttered background, harsh shadows, overly stylized expressions",
+                "male": negative_prompts + ", overly feminine features, exaggerated muscles, harsh shadows, overly vibrant or extreme hair colors",
+            }
+        }
+        
+        # 動態更新 CLIPTextEncode 節點中的描述
+        if "2" in workflow and "inputs" in workflow["2"] and "text" in workflow["2"]["inputs"]:
+            workflow["2"]["inputs"]["text"] = prompts["positive"][gender]
+        else:
+            return jsonify({"error": "Invalid workflow structure"}), 400
+        if "3" in workflow and "inputs" in workflow["3"] and "text" in workflow["3"]["inputs"]:
+            workflow["3"]["inputs"]["text"] = prompts["negative"][gender]
+        else:
+            return jsonify({"error": "Invalid workflow structure"}), 400
+
+        # 更新解析度
+        if "5" in workflow and "inputs" in workflow["5"] and "height" in workflow["5"]["inputs"]:
+            workflow["5"]["inputs"]["height"] = height
+        else:
+            # 預設解析度 512x512
+            workflow["5"]["inputs"]["height"] = 512
+
+        if "5" in workflow and "inputs" in workflow["5"] and "width" in workflow["5"]["inputs"]:
+            workflow["5"]["inputs"]["width"] = width
+        else:
+            # 預設解析度 512x512
+            workflow["5"]["inputs"]["width"] = 512
+            
+        
+    
+        print(f"Prompt positive: {workflow['2']['inputs']['text']}")
+        print(f"Prompt negative: {workflow['3']['inputs']['text']}")
+        
+        return workflow

@@ -35,8 +35,10 @@ class ComfyUIClient:
         try:
             workflow = self._load_workflow('./workflows/prompt_to_video.json')
             
-            # logging.info(f"Generating video with description: {json.dump(video_description)}")
-            # workflow["8"]["inputs"]["text"] = json.dump(video_description) # 動態替換動畫描述
+            video_description_str = ""
+            for key, value in video_description.items():
+                video_description_str += f"\"{key}\" :\"{value}\",\n"
+            workflow["8"]["inputs"]["text"] = video_description_str.strip() # 動態替換動畫描述
             # workflow["7"]["inputs"]["frame_rate"] = frame_rate  # 更新幀率
             
             """根據 prompt 通過 WebSocket 獲取生成的圖片"""
@@ -179,6 +181,7 @@ class ComfyUIClient:
 
                 file_data = response.read()
                 content_type = response.headers.get('content-type')
+                
                 if len(file_data) == 0:
                     logging.error("下載的文件為空，請檢查伺服器端是否正確生成了文件")
                 else:
@@ -186,8 +189,13 @@ class ComfyUIClient:
 
                 self.ensure_directory(output_dir)
                 output_filepath = os.path.join(output_dir, params['filename'])
+                
+                if 'video/webm' in content_type:
+                    output_filepath = os.path.join(output_dir, params['filename'].replace('.mp4', '.webm'))
+                    
                 with open(output_filepath, 'wb') as f:
                     f.write(file_data)
+                    logging.info(f"文件寫入完成，檔案大小為 {os.path.getsize(output_filepath)}")
 
                 logging.info(f"文件已保存到 {output_filepath}")
                 return output_filepath, content_type

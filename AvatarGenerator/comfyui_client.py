@@ -171,9 +171,18 @@ class ComfyUIClient:
         logging.info(f"正在下載: {full_url}")
 
         try:
+            # 嘗試發送請求並檢查 HTTP 狀態碼
             with urllib.request.urlopen(full_url) as response:
+                if response.status != 200:
+                    logging.error(f"下載失敗，伺服器返回狀態碼: {response.status}")
+                    return None, None
+
                 file_data = response.read()
                 content_type = response.headers.get('content-type')
+                if len(file_data) == 0:
+                    logging.error("下載的文件為空，請檢查伺服器端是否正確生成了文件")
+                else:
+                    logging.info(f"成功下載了文件，大小為 {len(file_data)} 字節，類型為 {content_type}")
 
                 self.ensure_directory(output_dir)
                 output_filepath = os.path.join(output_dir, params['filename'])

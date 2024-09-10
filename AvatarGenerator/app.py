@@ -113,21 +113,15 @@ def generate_video():
 
     # 調用 comfyui_client 的 get_video 方法，並動態替換 workflow 中的描述
     video_file, mime_type = comfyui_client.get_video(video_description)
-    logging.debug(f"video_file: {video_file}, mime_type: {mime_type}")
 
-    # 檢查返回的 video_data 是否是 tuple，並提取文件路徑和 MIME 類型
     if not video_file:
         return jsonify({"error": "Failed to generate video"}), 500
     
-    # Read the actual video content from the file path
-    with open(video_file, 'rb') as f:
-        video_data = f.read()
 
-    # 生成的影片返回
-    video_io = io.BytesIO(video_data)
+    # # 使用 send_file 直接傳遞文件路徑，而不是將文件讀取到內存中
     video_filename = os.path.basename(video_file)
         
-    return send_file(video_io, mimetype=mime_type, as_attachment=True, download_name=video_filename)
+    return send_file(video_file, mimetype=mime_type, as_attachment=True, download_name=video_filename)
 
 if __name__ == '__main__':
     app.run(debug=True)

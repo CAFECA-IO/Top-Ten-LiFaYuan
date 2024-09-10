@@ -13,6 +13,120 @@ class ComfyUIClient:
         """初始化 ComfyUI 客戶端"""
         self.server_address = server_address
         self.client_id = str(uuid.uuid4())
+        
+    def get_video(self, video_description, width=512, height=512, frame_rate=8):
+        """
+        使用 WebSocket 發送生成影片的請求，並根據 promptId 獲取歷史結果下載影片。
+        
+        參數:
+        - video_description: 用戶提供的動畫描述，替代 workflow 中的預設描述。
+        - width: 影片的寬度。
+        - height: 影片的高度。
+        - frame_rate: 影片的幀率。
+
+        返回:
+        - 影片的位元資料（bytes），若失敗則返回 None。
+        """
+        try:
+            # 讀取工作流配置
+            workflow_path = './workflows/prompt_to_video.json'
+            with open(workflow_path, 'r') as file:
+                workflow = json.load(file)
+
+            # 動態替換工作流中的動畫描述部分
+            workflow["8"]["inputs"]["text"] = video_description
+
+            # 使用 WebSocket 進行連接
+            ws = websocket.WebSocket()
+            ws.connect(f"ws://{self.server_address}/ws?clientId={self.client_id}")
+            print(f"Connected to ws://{self.server_address}/ws?clientId={self.client_id}")
+
+            # 發送提示並獲取 prompt_id
+            prompt_id = self.queue_prompt(workflow)['prompt_id']
+            print(f"Prompt ID: {prompt_id}")
+
+            # 監控生成過程，直到任務完成
+            while True:
+                out = ws.recv()
+                if isinstance(out, str):
+                    message = json.loads(out)
+                    if message['type'] == 'executing' and message['data']['node'] is None:
+                        break  # 任務執行完成
+
+            # 獲取生成的歷史結果
+            history = self.get_history(prompt_id)[prompt_id]
+            for node_id in history['outputs']:
+                node_output = history['outputs'][node_id]
+                if 'gifs' in node_output:
+                    video_filename = node_output['gifs'][0]['filename']
+                    print(f"影片生成成功: {video_filename}")
+                    
+                    # 下載影片
+                    return self.fetch_video(video_filename)
+
+            print("未能找到影片輸出。")
+            return None
+
+        except Exception as e:
+            print(f"生成影片時發生錯誤: {e}")
+            return None
+
+    def fetch_video(self, filename, subfolder='', file_type='temp', format='video/h264-mp4', frame_rate=8, force_size='835.406x?', output_dir='./generated_videos'):
+        """
+        通過參數化的 API 請求視頻並保存到指定目錄
+
+        參數:
+        - filename (必須): 視頻的文件名，例如 'AnimateDiff_00007.mp4'。
+        - subfolder (可選): 視頻所在的子目錄，默認為空。
+        - file_type (可選): 文件的類型，默認為 'temp'。
+        - format (必須): 視頻的格式，默認為 'video/h264-mp4'。
+        - frame_rate (可選): 視頻的幀率，默認為 8。
+        - force_size (可選): 視頻的尺寸，默認為 '835.406x?'。
+        - output_dir (可選): 保存視頻的目錄，默認為 './generated_videos'。
+
+        返回值:
+        - 視頻數據和內容類型，若失敗則返回 None。
+        """
+        # 構建 API 的基礎 URL
+        url = f"http://{self.server_address}/api/viewvideo"
+        
+        # 組合查詢參數
+        params = {
+            'filename': filename,  # 必須提供的視頻文件名
+            'subfolder': subfolder,
+            'type': file_type,
+            'format': format,      # 必須提供的視頻格式
+            'frame_rate': frame_rate,
+            'force_size': force_size
+        }
+        
+        # 將參數編碼為 URL 格式
+        url_values = urllib.parse.urlencode(params)
+        full_url = f"{url}?{url_values}"
+        print(f"正在請求視頻: {full_url}")
+
+        try:
+            # 發出 HTTP GET 請求並獲取響應
+            with urllib.request.urlopen(full_url) as response:
+                video_data = response.read()
+                content_type = response.headers.get('content-type')
+                
+                # 確保指定的目錄存在
+                self.ensure_directory(output_dir)
+                
+                # 構建文件保存路徑
+                output_filepath = os.path.join(output_dir, filename)
+                
+                # 將視頻保存到指定的文件
+                with open(output_filepath, 'wb') as f:
+                    f.write(video_data)
+                
+                print(f"視頻已保存到 {output_filepath}")
+                return output_filepath, content_type
+        except Exception as e:
+            print(f"請求視頻時發生錯誤: {e}")
+            return None, None
+
 
     def load_prompt(self, filepath):
         """從指定路徑加載 prompt 檔案"""

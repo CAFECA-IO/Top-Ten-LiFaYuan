@@ -9,23 +9,6 @@ app = Flask(__name__)
 # 初始化 ComfyUI 客戶端
 comfyui_client = ComfyUIClient("211.22.118.147:8188")
 
-positive_prompts = "Anime-style portrait, silver hair, soft lighting, delicate facial features, large reflective eyes, high-detailed, serene background"
-
-negative_prompts = "Excessive makeup, hyper-realism, distorted anatomy, harsh lighting, exaggerated emotions, overly vibrant or neon colors, blurry or out-of-focus details"
-
-prompts = {
-    "positive": {
-        "neutral": positive_prompts + ", neutral gender character, medium-length silver hair, casual outdoor clothing, soft shadows",
-        "female": positive_prompts + ", female character, long silver hair with soft waves, sporty jacket, cute expression",
-        "male": positive_prompts + ", male character, medium-length silver hair, sporty jacket with subtle masculine design, sharp but gentle features",
-    },
-    "negative": {
-        "neutral": negative_prompts + ", overly masculine or overly feminine features, extreme age (too young or too old), unnatural or neon-colored hair",
-        "female": negative_prompts + ", highly masculine features, cluttered background, harsh shadows, overly stylized expressions",
-        "male": negative_prompts + ", overly feminine features, exaggerated muscles, harsh shadows, overly vibrant or extreme hair colors",
-    }
-}
-
 @app.route('/generate-avatar-by-image', methods=['POST'])
 def generate_avatar_by_image():
     data = request.json
@@ -41,9 +24,26 @@ def generate_avatar_by_image():
         return jsonify({"error": "Resolution out of bounds"}), 400
     
     # 加載 workflow.json
-    workflow_path = './workflows/test.json'
+    workflow_path = './workflows/generate_avatar_by_image.json'
     if not os.path.exists(workflow_path):
         return jsonify({"error": "Workflow file not found"}), 404
+    
+    positive_prompts = "Anime-style portrait, silver hair, soft lighting, delicate facial features, large reflective eyes, high-detailed, serene background"
+
+    negative_prompts = "Excessive makeup, hyper-realism, distorted anatomy, harsh lighting, exaggerated emotions, overly vibrant or neon colors, blurry or out-of-focus details"
+
+    prompts = {
+        "positive": {
+            "neutral": positive_prompts + ", neutral gender character, medium-length silver hair, casual outdoor clothing, soft shadows",
+            "female": positive_prompts + ", female character, long silver hair with soft waves, sporty jacket, cute expression",
+            "male": positive_prompts + ", male character, medium-length silver hair, sporty jacket with subtle masculine design, sharp but gentle features",
+        },
+     "negative": {
+            "neutral": negative_prompts + ", overly masculine or overly feminine features, extreme age (too young or too old), unnatural or neon-colored hair",
+         "female": negative_prompts + ", highly masculine features, cluttered background, harsh shadows, overly stylized expressions",
+            "male": negative_prompts + ", overly feminine features, exaggerated muscles, harsh shadows, overly vibrant or extreme hair colors",
+        }
+    }
     
     prompt = comfyui_client.load_prompt(workflow_path)
     
@@ -143,6 +143,36 @@ def upload_image():
         return jsonify({"message": "Image uploaded successfully!", "response": response}), 200
     else:
         return jsonify({"error": "File upload failed"}), 500
+    
+
+@app.route('/generate-video', methods=['POST'])
+def generate_video():
+    data = request.json
+    video_description = data.get("video_description", "")
+    frame_rate = data.get("frame_rate", 8)
+    resolution = data.get("resolution", {"width": 512, "height": 512})
+
+    print(f"Generating video with description: {video_description}, resolution: {resolution}, frame rate: {frame_rate}")
+
+    # Validate resolution
+    width = resolution.get("width", 512)
+    height = resolution.get("height", 512)
+    if not (64 <= width <= 2048 and 64 <= height <= 2048):
+        return jsonify({"error": "Resolution out of bounds"}), 400
+
+    # Validate frame rate
+    if not (1 <= frame_rate <= 60):
+        return jsonify({"error": "Frame rate out of bounds"}), 400
+
+    # 調用 comfyui_client 的 get_video 方法，並動態替換 workflow 中的描述
+    video_data = comfyui_client.get_video(video_description, width, height, frame_rate)
+    if not video_data:
+        return jsonify({"error": "Failed to generate video"}), 500
+
+    # 生成的影片返回
+    video_io = io.BytesIO(video_data)
+    return send_file(video_io, mimetype='video/mp4', as_attachment=True, attachment_filename='generated_video.mp4')
+    
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -19,20 +19,19 @@ class ComfyUIClient:
         self.server_address = server_address
         self.client_id = str(uuid.uuid4())
 
-    def get_video(self, video_description, frame_rate=8):
+    def get_video(self, video_description, frame_rate=8, retry_attempts=3):
         """
         使用 WebSocket 發送生成影片的請求，並根據 promptId 獲取歷史結果下載影片。
-        
         參數:
         - video_description: 用戶提供的動畫描述，替代 workflow 中的預設描述。
-        - width: 影片的寬度。
-        - height: 影片的高度。
         - frame_rate: 影片的幀率。
+        - retry_attempts: 最大重試次數。
 
         返回:
         - 影片的位元資料（bytes），若失敗則返回 None。
         """
         try:
+            attempt = 1
             workflow = self._load_workflow('./workflows/prompt_to_video.json')
             
             video_description_str = ""
@@ -46,14 +45,29 @@ class ComfyUIClient:
             
             prompt_id = self.queue_prompt(workflow)['prompt_id']
             logging.info(f"Prompt ID: {prompt_id}")
-            self._wait_for_completion(ws)  # 等待完成
-            return self._get_output_video(prompt_id)
+
+            # 等待影片生成完成
+            self._wait_for_completion(ws)
+            video_file = self._get_output_video(prompt_id)
+
+            # 如果影片生成成功，返回影片文件
+            if video_file:
+                logging.info(f"影片生成成功，Prompt ID: {prompt_id}")
+                return video_file
+            else:
+                logging.error("影片生成失敗，嘗試重試")
 
         except Exception as e:
-            logging.error(f"生成影片時發生錯誤: {e}")
-            return None
-        
+            attempt += 1
+            logging.error(f"生成影片時發生錯誤 (嘗試 {attempt}/{retry_attempts}): {e}")
+            
+            # 最後一次重試後仍失敗，返回 None
+            if attempt >= retry_attempts:
+                logging.error("所有重試均失敗，返回 None")
+                return None
+
         finally:
+            # 確保 WebSocket 被正確關閉
             ws.close()
 
     def upload_image(self, file_path, file_name):

@@ -84,7 +84,7 @@ class ComfyUIClient:
             logging.error(f"上傳圖片時發生錯誤: {e}")
             return None
 
-    def fetch_video(self, filename, subfolder='', file_type='temp', format='video/h264-mp4', frame_rate=8, force_size='835.406x?', output_dir='./generated_videos'):
+    def fetch_video(self, filename, subfolder='', file_type='temp', format='video/h264-mp4', frame_rate=8, force_size='835.406x?', output_dir='./output/generated_videos'):
         """
         通過參數化的 API 請求下載影片並保存到指定目錄。
 
@@ -114,7 +114,7 @@ class ComfyUIClient:
             logging.error(f"請求視頻時發生錯誤: {e}")
             return None, None
 
-    def save_images(self, images, output_dir='./generated_avatar', upload_url=None):
+    def save_images(self, images, output_dir='./output/generated_avatar', upload_url=None):
         """
         將生成的圖片保存到指定資料夾，並選擇性地上傳到指定的 API。
         

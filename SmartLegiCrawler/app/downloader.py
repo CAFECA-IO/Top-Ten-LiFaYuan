@@ -53,34 +53,26 @@ async def get_video_source_by_puppeteer(url):
     await browser.close()
     return filelink
 
-def download(video_url):
+async def download(video_url):
     logger.info(f"開始下載視頻：{video_url}")
     video_id = video_url.split('/')[-1]
-    video_path = get_path('downloads', video_id, 'mp4')
-    """
-    # using chrome to get video source
-
-    m3u8_url = get_video_source(video_url)
-    if not m3u8_url:
-        logger.info("Failed to get video source")
-        sys.exit(1)
-    """
+    video_path = get_path('videos', f'{video_id}.mp4')
+    
     try:
-        loop = asyncio.get_event_loop()
-        m3u8_url = loop.run_until_complete(get_video_source_by_puppeteer(video_url))
+        m3u8_url = await get_video_source_by_puppeteer(video_url)
         if not m3u8_url:
             logger.info("Failed to get video source")
-            sys.exit(1)
+            return {"status": "error", "message": "Failed to get video source"}
     except Exception as e:
-        logger.info(f"Error during fetching video source: {e}")
-        sys.exit(1)
+        logger.error(f"Error during fetching video source: {e}")
+        return {"status": "error", "message": str(e)}
+
     logger.info(f"Downloading video from {m3u8_url} to {video_path}")
-    download_thread = threading.Thread(target=download_video, args=(m3u8_url, video_path))
-    download_thread.start()
-    download_thread.join()
+    await asyncio.to_thread(download_video, m3u8_url, video_path)
 
     if not os.path.exists(video_path):
         logger.error(f"Failed to download video from {video_path}")
-        sys.exit(1)
+        return {"status": "error", "message": "Failed to download video"}
     else:
         logger.info(f"Video downloaded successfully from {video_path}")
+        return {"status": "success", "message": "Video downloaded successfully"}

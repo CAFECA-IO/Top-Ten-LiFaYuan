@@ -62,7 +62,8 @@ def parse_video_element(video_element):
 
     return video_info
 
-async def scrape_video_links(browser, meeting_id):
+async def scrape_video_links(meeting_id):
+    browser = await init_driver()
     """爬取會議視頻鏈接"""
     base_url = 'https://ivod.ly.gov.tw'
     meeting_url = f'http://ivod.ly.gov.tw/Demand/Meetvod?Meet={meeting_id}'

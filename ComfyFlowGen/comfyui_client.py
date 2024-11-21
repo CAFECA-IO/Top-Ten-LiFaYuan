@@ -109,7 +109,7 @@ class ComfyUIClient:
                 'frame_rate': frame_rate,
                 'force_size': force_size
             }
-            return self._download_file('viewvideo', params, output_dir)
+            return self._download_file('view', params, output_dir)
         except Exception as e:
             logging.error(f"請求視頻時發生錯誤: {e}")
             return None, None
@@ -155,11 +155,12 @@ class ComfyUIClient:
             return self._get_output_images(prompt_id)
         finally:
             ws.close()  # 確保 WebSocket 在完成後被正確關閉
-    
+
     def get_vocal(self, text, speed, inference_mode, spf_spk):
         workflow = self._load_workflow('./workflows/generate_vocal_by_text.json')
         
-        workflow["2"]["inputs"]["text"] = text
+        if text != "":
+            workflow["2"]["inputs"]["text"] = text
         workflow["15"]["inputs"]["speed"] = speed
         workflow["15"]["inputs"]["inference_mode"] = inference_mode
         workflow["15"]["inputs"]["sft_dropdown"]  = spf_spk
@@ -176,13 +177,34 @@ class ComfyUIClient:
             
     def _get_output_audio(self, prompt_id):
         history = self.get_history(prompt_id).get(prompt_id, {})
-        print(history)
+        print('_get_output_audio', history)
         for node_id, node_output in history.get('outputs', {}).items():
             if 'audio' in node_output:
                 audio_filename = node_output['audio'][0]['filename']
                 logging.info(f"音頻生成成功: {audio_filename}")
                 return self.fetch_audio(audio_filename)
-        
+
+    def fetch_audio(self, filename, output_dir='./output/generated_audio'):
+        """
+        通過參數化的 API 請求下載音頻並保存到指定目錄。
+
+        參數:
+        - filename: 音頻文件名，例如 'GeneratedAudio_0001.wav'。
+        - output_dir: 保存音頻文件的目錄，默認為 './output/generated_audio'。
+
+        返回:
+        - 音頻文件路徑和內容類型，若失敗則返回 None。
+        """
+        try:
+            params = {
+                'filename': filename,
+                'type': 'output',
+                'subfolder': 'audio',
+            }
+            return self._download_file('view', params, output_dir)
+        except Exception as e:
+            logging.error(f"請求音頻時發生錯誤: {e}")
+        return None, None
 
     def _load_workflow(self, filepath):
         """從指定路徑加載工作流配置"""

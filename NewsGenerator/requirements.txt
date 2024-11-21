@@ -1,0 +1,14 @@
+requests
+diffusers
+transformers
+bark
+torch 
+torchvision 
+torchaudio
+accelerate
+sentencepiece
+protobuf
+peft
+googletrans==4.0.0-rc1
+pillow
+moviepy

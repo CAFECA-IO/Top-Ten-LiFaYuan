@@ -50,8 +50,9 @@ async def get_meetings():
 
 # 第二個 API：會議視頻詳情
 @app.route('/api/meetings/<meeting_id>', methods=['GET'])
-def get_meeting_videos(meeting_id):
-    videos_source = scrape_video_links(meeting_id)
+async def get_meeting_videos(meeting_id):
+    print(f"meeting_id: {meeting_id}")
+    videos_source = await scrape_video_links(meeting_id)
 
     response = {
         'details': videos_source,
@@ -64,10 +65,12 @@ def get_meeting_videos(meeting_id):
 
 # 第三個 API：下載視頻
 @app.route('/api/download', methods=['POST'])
-def downloader():
-    video_url = request.json.get('url')
-    try:
-        download(video_url)
-        return jsonify({'message': '視頻下載成功'}), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+async def downloader():
+    request_data = await request.get_json()
+    video_url = request_data.get('url')
+    
+    if not video_url:
+        return jsonify({"status": "error", "message": "Missing video URL"}), 400
+
+    result = await download(video_url)
+    return jsonify(result)

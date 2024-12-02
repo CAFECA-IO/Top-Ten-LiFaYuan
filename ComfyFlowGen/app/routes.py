@@ -13,6 +13,10 @@ app = Flask(__name__)
 # 初始化 ComfyUI 客戶端
 comfyui_client = ComfyUIClient("211.22.118.147:8188")
 
+@app.route('/')
+def index():
+    return "Welcome to ComfyFlowGen!"
+
 @app.route('/generate-avatar-by-image', methods=['POST'])
 def generate_avatar_by_image():
     data = request.json

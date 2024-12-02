@@ -44,7 +44,7 @@ def optimize_if_needed(video_id):
         sys.exit(1)
 
 def summarize_if_needed(script_path, video_id):
-    summary_path = get_path('summarized_transcripts', f'{video_id}.txt')
+    summary_path = get_path('summaries', f'{video_id}.txt')
     logger.info(f"Generating summary from {script_path} to {summary_path}")
     generate_summary(script_path, summary_path)
     return summary_path

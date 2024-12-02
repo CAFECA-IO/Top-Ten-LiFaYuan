@@ -22,7 +22,7 @@ def summarizer():
     video_url = request.json.get('url')
     video_id = video_url.split('/')[-1]
     transcript_path = get_path('transcripts', f'{video_id}.json')
-    summarize_path = get_path('summarized_transcripts', f'{video_id}.txt')
+    summarize_path = get_path('summaries', f'{video_id}.txt')
     
     # 檢查總結逐字稿文件是否存在
     if not os.path.exists(summarize_path):

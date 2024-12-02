@@ -9,7 +9,7 @@ echo "Initial working directory: $ROOT_DIR"
 
 # 定義共用資料夾和子資料夾的絕對路徑
 SHARED_DATA_PATH="$ROOT_DIR/shared_data"
-FOLDERS=("videos" "audios" "processed_audios" "transcripts" "optimized_transcripts" "summarized_transcripts")
+FOLDERS=("videos" "audios" "processed_audios" "transcripts" "optimized_transcripts" "summaries")
 
 # 如果共用資料夾或子資料夾不存在，則創建它們
 if [ ! -d "$SHARED_DATA_PATH" ]; then

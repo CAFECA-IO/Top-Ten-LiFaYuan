@@ -12,14 +12,29 @@
 
 ```plaintext
 Top-Ten-LiFaYuan/
+├── app/
+│   ├── crawler.py               # 爬取會議列表和視頻
+│   ├── generator.py             # 配音和視頻生成
+│   ├── news_pipeline.py         # 整合各步驟的新聞生成邏輯
+│   ├── progress_checker.py      # 管理執行進度，支持中斷後續處理，並可重新指定日期
+│   ├── summarizer.py            # 生成摘要
+│   ├── transcriber.py           # 轉換視頻為字幕
+│   └── utils.py                 # 公共工具方法
+│
+├── logs/                        # 日誌目錄
+│   ├── main.log                 # 主流程日誌
+│   ├── crawler.log              # 爬取日誌
+│   ├── transcriber.log          # 字幕日誌
+│   ├── summarizer.log           # 摘要日誌
+│   └── generator.log            # 配音與視頻生成日誌
 │
 ├── shared_data/                    # 共用的資料夾
 │   ├── videos/
 │   ├── audios/
-│   ├── processed_audios/
+│   ├── ~processed_audios/~         # deprecated
 │   ├── transcripts/
-│   ├── optimized_transcripts/
-│   └── summarized_transcripts/
+│   ├── ~optimized_transcripts/~    # deprecated
+│   └── summaries/
 │
 ├── SmartLegiCrawler/               # 子專案 1
 ├── VideoScript/                    # 子專案 2
@@ -229,3 +244,142 @@ chmod +rwx <project_path>
 - 為每個子專案創建虛擬環境並安裝依賴。
 - 在特定端口啟動每個服務，並記錄日誌。
 - 如果端口被佔用，跳過該服務並提示用戶檢查。
+
+
+### **改為服務啟動時自動執行流程**
+
+以下是改進後的解決方案，移除了對 `cron` 的依賴，並改為服務啟動時自動檢查和執行流程，支持從上一次的進度開始，並可動態指定新影片的日期。
+
+---
+
+### **修改後的設計邏輯**
+
+1. **服務啟動時執行進度檢查**：
+   - 檢查之前的進度記錄（例如，是否有未完成的下載、字幕轉換或摘要生成）。
+   - 確認未完成的步驟後自動執行。
+
+2. **支持指定新日期的任務**：
+   - 通過 API 指定一個新的日期範圍，觸發對新影片的爬取和處理。
+
+3. **循環執行**：
+   - 使用異步處理和檢查邏輯，確保所有步驟按順序完成。
+
+---
+
+### **實現步驟**
+
+#### **1. 增加進度記錄功能**
+每個步驟完成後保存進度到文件，供下一次服務啟動時檢查。
+
+```python
+# app/utils.py
+
+import json
+import os
+
+PROGRESS_FILE = "progress.json"
+
+def save_progress(stage, details):
+    """保存當前的執行進度"""
+    progress = load_progress()
+    progress[stage] = details
+    with open(PROGRESS_FILE, "w") as f:
+        json.dump(progress, f, indent=4)
+
+def load_progress():
+    """加載執行進度"""
+    if not os.path.exists(PROGRESS_FILE):
+        return {}
+    with open(PROGRESS_FILE, "r") as f:
+        return json.load(f)
+```
+
+---
+
+#### **2. 增加啟動時檢查邏輯**
+
+服務啟動時，自動檢查進度並執行未完成的任務。
+
+```python
+# app/progress_checker.py
+
+from app.crawler import fetch_meetings, download_video
+from app.transcriber import transcribe_video
+from app.summarizer import summarize_transcript
+from app.generator import generate_vocal, generate_video
+from app.utils import load_progress, save_progress
+
+def process_videos(date=None):
+    """處理影片的完整流程，從指定日期或上一次進度開始"""
+    progress = load_progress()
+    
+    # 檢查是否有指定日期，優先處理新日期
+    if date:
+        progress["date"] = date
+        save_progress("date", {"date": date})
+
+    date_to_process = progress.get("date")
+    if not date_to_process:
+        raise ValueError("未指定影片日期且無上一次進度記錄。")
+
+    # 爬取會議列表
+    meetings = fetch_meetings(date_to_process)
+    save_progress("meetings", {"meetings": meetings})
+
+    # 下載視頻
+    for meeting in meetings:
+        for video in meeting.get("videos", []):
+            download_video(video["url"])
+            save_progress("download", {"video_id": video["video_id"]})
+
+    # 字幕轉換
+    for meeting in meetings:
+        for video in meeting.get("videos", []):
+            transcribe_video(video["url"])
+            save_progress("transcribe", {"video_id": video["video_id"]})
+
+    # 摘要生成
+    for meeting in meetings:
+        for video in meeting.get("videos", []):
+            summarize_transcript(video["url"])
+            save_progress("summarize", {"video_id": video["video_id"]})
+
+    # 配音與視頻生成
+    for meeting in meetings:
+        for video in meeting.get("videos", []):
+            transcript = f"transcripts/{video['video_id']}.json"
+            summary = f"summaries/{video['video_id']}.txt"
+            generate_vocal(summary)
+            generate_video(summary)
+            save_progress("generate", {"video_id": video["video_id"]})
+```
+
+---
+
+### **測試方式**
+
+#### **1. 啟動服務**
+
+運行主腳本啟動服務：
+
+```bash
+python3 main.py
+```
+
+#### **2. 確認自動檢查進度**
+
+- 檢查日誌或輸出，確保服務能正確執行未完成的步驟。
+
+#### **3. 提交新任務**
+
+使用 API 指定新日期：
+
+```bash
+curl -X POST -H "Content-Type: application/json" \
+-d '{"date": "2024-12-01"}' \
+http://localhost:8000/start
+```
+
+#### **4. 驗證輸出**
+
+- 檢查 `videos/`、`transcripts/`、`summaries/` 和 `output/` 目錄，確認是否生成正確的文件。

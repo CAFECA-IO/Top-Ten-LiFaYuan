@@ -4,11 +4,10 @@ from comfyui_client import ComfyUIClient
 import os
 import logging
 import json
+from . import app
 
 # 設置日誌格式和級別
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-
-app = Flask(__name__)
 
 # 初始化 ComfyUI 客戶端
 comfyui_client = ComfyUIClient("211.22.118.147:8188")

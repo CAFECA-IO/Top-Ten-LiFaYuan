@@ -3,17 +3,13 @@
 LOG_FILE="setup_and_run_projects.log"
 exec > >(tee -a $LOG_FILE) 2>&1
 
-# 打印調試信息
-echo "Starting setup_and_run_projects.sh script..."
-date
+# 記錄初始工作目錄
+ROOT_DIR=$(pwd)
+echo "Initial working directory: $ROOT_DIR"
 
-# 定義共用資料夾和子資料夾的路徑
-SHARED_DATA_PATH=$(pwd)/shared_data
-FOLDERS=("videos" "audios" "processed_audios" "transcripts" "optimized_transcripts" "summarized_transcripts")
-
-# 打印共用資料夾和子資料夾的路徑
-echo "Shared data path: $SHARED_DATA_PATH"
-echo "Folders: ${FOLDERS[@]}"
+# 定義共用資料夾和子資料夾的絕對路徑
+SHARED_DATA_PATH="$ROOT_DIR/shared_data"
+FOLDERS=("videos" "audios" "processed_audios" "transcripts" "optimized_transcripts" "summaries")
 
 # 如果共用資料夾或子資料夾不存在，則創建它們
 if [ ! -d "$SHARED_DATA_PATH" ]; then
@@ -30,13 +26,13 @@ for folder in "${FOLDERS[@]}"; do
 done
 
 # 定義每個小專案的名稱、路徑和分配的端口
-PROJECT_NAMES=("SmartLegiCrawler" "VideoScript" "EventSummarizer")
-PROJECT_PORTS=(5000 5001 5002)
+PROJECT_NAMES=("SmartLegiCrawler" "VideoScript" "EventSummarizer" "ComfyFlowGen")
+PROJECT_PORTS=(5000 5001 5002 5003)
 
 check_port() {
     local port=$1
     if lsof -i:$port > /dev/null; then
-        echo "Port $port is already in use."
+        echo "Port $port is already in use. Please check if the corresponding service is running."
         return 1
     else
         return 0
@@ -51,11 +47,12 @@ terminate_previous_process() {
 for i in "${!PROJECT_NAMES[@]}"; do
     project=${PROJECT_NAMES[$i]}
     PORT=${PROJECT_PORTS[$i]}
-    PROJECT_PATH="./$project"
+    PROJECT_PATH="$ROOT_DIR/$project"  # 使用絕對路徑
     VENV_PATH="$PROJECT_PATH/venv"
-    OUTPUT_LOG=$(pwd)/"$PROJECT_PATH/output.log"
+    OUTPUT_LOG="$PROJECT_PATH/output.log"
 
     echo "Setting up and starting $project on port $PORT..."
+    echo "Checking if project directory exists: $PROJECT_PATH"
 
     # 檢查專案資料夾是否存在
     if [ ! -d "$PROJECT_PATH" ]; then
@@ -69,10 +66,21 @@ for i in "${!PROJECT_NAMES[@]}"; do
         exit 1
     fi
 
+    # # 如果端口已被佔用，跳過該服務
+    # if ! check_port $PORT; then
+    #     echo "Skipping $project due to port $PORT conflict."
+    #     continue
+    # fi
+
     # 配置虛擬環境並安裝依賴
     if [ ! -d "$VENV_PATH" ]; then
         echo "Setting up virtual environment for $project..."
         python3 -m venv "$VENV_PATH"
+    # 檢查虛擬環境是否有效
+    elif [ ! -x "$VENV_PATH/bin/python" ] || ! "$VENV_PATH/bin/python" --version > /dev/null 2>&1; then
+            echo "Invalid virtual environment detected. Recreating it for $project..."
+            rm -rf "$VENV_PATH"
+            python3 -m venv "$VENV_PATH"
         if [ $? -ne 0 ]; then
             echo "Failed to create virtual environment for $project"
             exit 1
@@ -130,17 +138,18 @@ for i in "${!PROJECT_NAMES[@]}"; do
     nohup python run.py --port "$PORT" >> "$OUTPUT_LOG" 2>&1 &
     sleep 3  # 延遲三秒以確保每個專案有時間啟動
 
-    # 檢查進程是否已經啟動
-    if pgrep -f "python run.py --port $PORT" > /dev/null; then
+    # 改進進程啟動檢查邏輯
+    if lsof -i:$PORT | grep LISTEN > /dev/null; then
         echo "$project started successfully on port $PORT"
     else
         echo "Failed to start $project on port $PORT"
         echo "Log output from $project:"
         cat "$OUTPUT_LOG"
-        exit 1
+        continue
     fi
 
-    cd -  # 返回腳本執行目錄
+    # 返回初始工作目錄
+    cd "$ROOT_DIR"
 done
 
 echo "All projects started. Press Ctrl+C to stop."

@@ -132,3 +132,5 @@ dist
 shared_data/
 
 CosyVoice/
+
+app/__pycache__

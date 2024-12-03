@@ -4,14 +4,17 @@ from comfyui_client import ComfyUIClient
 import os
 import logging
 import json
+from . import app
 
 # 設置日誌格式和級別
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
-app = Flask(__name__)
-
 # 初始化 ComfyUI 客戶端
 comfyui_client = ComfyUIClient("211.22.118.147:8188")
+
+@app.route('/')
+def index():
+    return "Welcome to ComfyFlowGen!"
 
 @app.route('/generate-avatar-by-image', methods=['POST'])
 def generate_avatar_by_image():

@@ -376,7 +376,7 @@ python3 main.py
 
 ```bash
 curl -X POST -H "Content-Type: application/json" \
--d '{"date": "2024-12-01"}' \
+-d '{"date": "2024-12-03"}' \
 http://localhost:8000/start
 ```
 

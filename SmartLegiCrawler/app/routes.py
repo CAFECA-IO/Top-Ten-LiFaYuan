@@ -29,6 +29,7 @@ async def get_meetings():
     q = request.args.get('q', None)
     committee = request.args.get('committee', None)
     limit = request.args.get('limit', default=100, type=int)
+    print(f"start_date: {start_date}, end_date: {end_date}, page: {page}, q: {q}, committee: {committee}, limit: {limit}")
     
     try:
         meetings, has_more, current_page = await scrape_meetings(start_date, end_date, page, q, committee, limit)

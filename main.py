@@ -1,6 +1,6 @@
 # main.py
-
 from flask import Flask, request, jsonify
+import asyncio
 from app.progress_checker import process_videos
 
 app = Flask(__name__)
@@ -14,12 +14,12 @@ def start_processing():
     try:
         data = request.json
         date = data.get("date")  # 指定新日期，格式 YYYY-MM-DD
-        process_videos(date)
+        asyncio.run(process_videos(date))  # 使用 asyncio 來啟動非同步任務
         return jsonify({"message": "Processing started", "date": date}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     print("Starting video processing service...")
-    process_videos()  # 啟動時自動檢查進度並處理
+    asyncio.run(process_videos())  # 啟動時自動檢查進度並處理
     app.run(host="0.0.0.0", port=8000)

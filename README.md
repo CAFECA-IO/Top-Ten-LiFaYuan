@@ -245,7 +245,6 @@ chmod +rwx <project_path>
 - 在特定端口啟動每個服務，並記錄日誌。
 - 如果端口被佔用，跳過該服務並提示用戶檢查。
 
-
 ### **改為服務啟動時自動執行流程**
 
 以下是改進後的解決方案，移除了對 `cron` 的依賴，並改為服務啟動時自動檢查和執行流程，支持從上一次的進度開始，並可動態指定新影片的日期。
@@ -269,6 +268,7 @@ chmod +rwx <project_path>
 ### **實現步驟**
 
 #### **1. 增加進度記錄功能**
+
 每個步驟完成後保存進度到文件，供下一次服務啟動時檢查。
 
 ```python
@@ -383,3 +383,32 @@ http://localhost:8000/start
 #### **4. 驗證輸出**
 
 - 檢查 `videos/`、`transcripts/`、`summaries/` 和 `output/` 目錄，確認是否生成正確的文件。
+
+你的環境顯示 `moviepy` 已安裝，但在 Python Shell 中仍然出現 `ModuleNotFoundError`。這種情況可能是因為模組安裝的位置與 Python 的搜索路徑不一致。以下是解決方法：
+
+---
+
+### 重建虛擬環境（可選）
+
+重新創建虛擬環境並重新安裝依賴項辦法：
+
+1. 清除現有環境：
+
+   ```bash
+   conda deactivate
+   conda remove --name newsgenerator --all
+   ```
+
+2. 重建環境：
+
+   ```bash
+   conda create --name newsgenerator python=3.9
+   conda activate newsgenerator
+   pip install -r requirements.txt
+   ```
+
+3. 再次運行程序：
+
+   ```bash
+   python3 main.py
+   ```

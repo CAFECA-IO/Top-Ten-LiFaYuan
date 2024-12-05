@@ -203,7 +203,7 @@ python run.py
 **範例**:
 
 ```sh
-curl -X POST http://localhost:5000/api/transcribe -H "Content-Type: application/json" -d '{"url": "https://ivod.ly.gov.tw/Play/Clip/300K/154397"}'
+curl -X POST http://localhost:5001/api/transcribe -H "Content-Type: application/json" -d '{"url": "https://ivod.ly.gov.tw/Play/Clip/300K/154397"}'
 ```
 
 **回應**:

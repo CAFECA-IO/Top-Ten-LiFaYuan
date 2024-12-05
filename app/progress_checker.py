@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from app.crawler import fetch_meetings, download_video
+from app.audio_extractor import extract_audio
 from app.transcriber import transcribe_video
 from app.summarizer import summarize_transcript
 from app.generator import generate_vocal, generate_video
@@ -57,14 +58,15 @@ async def process_videos(date=None):
                     "status": "pending",
                     "steps": {
                         "download": False,
+                        "extract_audio": False,
                         "transcribe": False,
                         "summarize": False,
                         "generate_audio": False,
                         "generate_video": False
                     },
+                    "summary": None,
                     "audio": None,
                     "video": None,
-                    "summary": None,
                     "error": None
                 }
 
@@ -83,9 +85,20 @@ async def process_videos(date=None):
                         save_progress("results", progress["results"])
                         logger.info(f"下載影片 {video_id} 時發生錯誤：{e}")
 
+                # **提取音頻**
+                if not video_progress["steps"]["extract_audio"] and video_progress["steps"]["download"]:
+                    logger.info(f"提取音頻：{video_id}")
+                    try:
+                        await extract_audio(video_id)
+                        video_progress["steps"]["extract_audio"] = True
+                        save_progress("results", progress["results"])
+                    except Exception as e:
+                        video_progress["error"] = f"提取音頻失敗：{str(e)}"
+                        save_progress("results", progress["results"])
+                        logger.info(f"提取音頻 {video_id} 時發生錯誤：{e}")     
                         
                 # **轉錄字幕**
-                if not video_progress["steps"]["transcribe"] and video_progress["steps"]["download"]:
+                if not video_progress["steps"]["transcribe"] and video_progress["steps"]["extract_audio"]:
                     logger.info(f"轉錄字幕：{video_id}")
                     try:
                         await transcribe_video(video_id)

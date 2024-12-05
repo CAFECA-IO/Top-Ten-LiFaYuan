@@ -2,13 +2,19 @@
 
 ## 簡介
 
-這個專案提供了將會議視頻並轉換為逐字稿。通過使用 `ffmpeg` 提取音頻，利用 Whisperx 切分不同發言人的逐字稿，再使用財團法人國家實驗研究院（以下稱「國研院」）開發並建置的 Llama3-TAIDE 模型來優化逐字稿。
+Video Script 是一個專案，旨在將會議視頻自動轉換為逐字稿並進行優化。它結合了多種工具和技術，支持以下功能：
+
+- 使用 `ffmpeg` 提取音頻。
+- 使用 Whisperx 對逐字稿進行語音識別與分段。
+- 基於國研院開發的 Llama3-TAIDE 模型進一步優化逐字稿內容。
+
+---
 
 ## 環境配置
 
-### 1. 建立 Python 虛擬環境
+### **1. 建立 Python 虛擬環境**
 
-確保你已安裝 Python 3。然後，使用以下命令來建立虛擬環境並啟動它：
+確保已安裝 Python 3，然後建立並激活虛擬環境：
 
 ```bash
 python3 -m venv venv
@@ -16,19 +22,23 @@ source venv/bin/activate  # MacOS/Linux
 venv\Scripts\activate     # Windows
 ```
 
-### 2. 安裝必要的套件
+---
 
-在虛擬環境中安裝所需的 Python 套件：
+### **2. 安裝必要的套件**
+
+在虛擬環境中安裝專案依賴：
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. 安裝 FFmpeg
+---
 
-根據你的操作系統安裝 FFmpeg：
+### **3. 安裝 FFmpeg**
 
-- **MacOS**：
+根據操作系統選擇適當的安裝方法：
+
+- **MacOS**：使用 Homebrew
 
   ```bash
   brew install ffmpeg
@@ -38,7 +48,6 @@ pip install -r requirements.txt
   - 從 [FFmpeg 官網](https://ffmpeg.org/download.html) 下載 FFmpeg 的壓縮包。
   - 解壓縮到一個目錄，例如 `C:\Program Files\ffmpeg`。
   - 將 `ffmpeg` 目錄下的 `bin` 目錄添加到你的系統環境變數 PATH 中。
-
 - **Linux**：
 
   ```bash
@@ -46,7 +55,9 @@ pip install -r requirements.txt
   sudo apt install ffmpeg
   ```
 
-### 4. 生成 Hugging Face API Token
+---
+
+### **4. 配置 Hugging Face API Token**
 
 1. 確保接受模型使用條款，訪問 [taide/Llama3-TAIDE-LX-8B-Chat-Alpha1 模型頁面](https://huggingface.co/taide/Llama3-TAIDE-LX-8B-Chat-Alpha1)，並接受使用條款。
 2. 登錄到 [Hugging Face](https://huggingface.co/settings/tokens)。
@@ -63,224 +74,171 @@ pip install -r requirements.txt
 
 在專案目錄中創建一個名為 `.env` 的文件，並添加以下內容：
 
-```bash
+```plaintext
 HUGGINGFACE_API_TOKEN=您的 Hugging Face API Token
 ```
 
-#### 2. 加載 `.env` 文件
+---
 
-在代碼中使用 `python-dotenv` 庫來加載 `.env` 文件中的環境變量。
-
-在您的代碼中添加以下內容：
-
-```python
-from dotenv import load_dotenv
-import os
-
-# 加載 .env 文件
-load_dotenv()
-
-# 獲取 API Token
-token = os.getenv("HUGGINGFACE_API_TOKEN")
-```
-
-## 項目結構
+## 專案結構
 
 ```plaintext
-TranscriptionProject/
+shared_data/              # 音頻、視頻和逐字稿的存儲
+├── videos/               # 下載的視頻文件
+├── audios/               # 提取的音頻文件
+|
+VideoScriptProject/
 │
-├── app/
-│   ├── __init__.py         # 初始化 Flask 應用
-│   ├── routes.py           # 定義 API 路由
-│   ├── downloader.py       # 視頻下載邏輯
-│   ├── audio_extractor.py  # 音頻提取邏輯
-│   ├── transcribe.py       # 語音轉文字邏輯
-│   ├── optimize.py         # 逐字稿優化邏輯
-│   ├── utils.py            # 工具函數
+├── app/                      # 核心應用代碼
+│   ├── __init__.py           # 初始化 Flask 應用
+│   ├── routes.py             # API 路由定義
+│   ├── downloader.py         # 視頻下載邏輯
+│   ├── audio_extractor.py    # 音頻提取邏輯
+│   ├── transcribe.py         # 語音轉文字邏輯
+│   ├── optimize.py           # 逐字稿優化邏輯
+│   ├── utils.py              # 工具函數
 │
-├── downloads/              # 下載的視頻
+│   ├── transcripts/          # 生成的逐字稿
 │
-├── audios/                 # 轉換的音頻
+├── venv/                     # Python 虛擬環境
 │
-├── scripts/                # 生成的逐字稿
-│
-├── venv/                   # 虛擬環境
-│
-├── requirements.txt        # 專案依賴
-│
-├── run.py                  # 啟動應用
-├── readme.md               # 專案說明文件
-│
-└── .gitignore              # Git 忽略文件
+├── requirements.txt          # 專案依賴
+├── run.py                    # 啟動應用
+└── readme.md                 # 說明文件
 ```
 
-## 啟動應用
+---
 
-要啟動 Flask 應用，請按照以下步驟進行：
+## 操作步驟
 
-### 1. 準備工作
+### **1. 啟動應用**
 
-確保您已經完成了環境配置部分的所有步驟，包括建立 Python 虛擬環境、安裝必要的套件、安裝 FFmpeg、生成 Hugging Face API Token 以及配置環境變量。
-
-### 2. 下載視頻
-
-要下載會議視頻，請運行以下命令：
-
-目前下載的視頻網址是寫死的，還未提供接口。
-
-```bash
-python run.py download
-```
-
-這將下載指定的會議視頻並將其保存到 `downloads` 目錄中。
-
-### 3. 提取音頻
-
-從下載的視頻中提取音頻，請運行以下命令：
-
-```bash
-python run.py extract
-```
-
-這將提取視頻中的音頻並將其保存到 `audios` 目錄中。
-
-### 4. 處理音頻
-
-要對提取的音頻進行處理（如降噪），請運行以下命令：
-
-```bash
-python run.py process
-```
-
-這將處理音頻並將結果保存到 `audios` 目錄中。
-
-### 5. 轉換音頻為逐字稿
-
-要將處理過的音頻轉換為逐字稿，請運行以下命令：
-
-```bash
-python run.py transcribe
-```
-
-這將生成逐字稿並將其保存到 `scripts` 目錄中。
-
-### 6. 優化逐字稿
-
-使用 Llama3-TAIDE 模型來優化生成的逐字稿，請運行以下命令：
-
-```bash
-python run.py optimize
-```
-
-這將優化逐字稿並將結果保存到 `scripts` 目錄中。
-
-### 7. 啟動 Flask 應用
-
-如果您希望啟動完整的 Flask 應用來提供 API 服務，可以運行以下命令：
+執行以下命令啟動 Flask 應用，提供 API 服務：
 
 ```bash
 python run.py
 ```
 
-這將啟動 Flask 應用，您可以通過 `http://localhost:5000` 訪問應用並使用其提供的 API。
+應用啟動後，可通過 `http://localhost:5001` 訪問 API。
 
-### 8. 使用 API
+---
 
-應用提供了一個 API 來下載會議視頻、轉換音頻並生成逐字稿。以下是一個示例請求來轉換視頻為逐字稿：
+### **2. API 使用說明**
 
-**URL**: `/api/transcribe`
+#### **API 1: 提取音頻**
 
-**方法**: `POST`
+- **URL**: `/api/extract_audio`  
+- **方法**: `POST`  
+- **功能**: 從指定視頻中提取音頻，並保存為 `.wav` 格式。
 
 **請求體**:
 
 ```json
 {
-    "url": "https://ivod.ly.gov.tw/Play/Clip/300K/154397"
+    "video_id": "12345"
 }
 ```
 
-**範例**:
+**範例請求**:
 
-```sh
-curl -X POST http://localhost:5001/api/transcribe -H "Content-Type: application/json" -d '{"url": "https://ivod.ly.gov.tw/Play/Clip/300K/154397"}'
+```bash
+curl -X POST http://localhost:5001/api/extract_audio \
+-H "Content-Type: application/json" \
+-d '{"video_id": "12345"}'
 ```
 
 **回應**:
 
+- 成功:
+
+  ```json
+  {
+      "message": "提取音頻成功",
+      "audio_path": "/path/to/audio/12345.wav"
+  }
+  ```
+
+- 失敗:
+
+  ```json
+  {
+      "error": "視頻文件不存在"
+  }
+  ```
+
+---
+
+#### **API 2: 轉錄音頻**
+
+- **URL**: `/api/transcribe`  
+- **方法**: `POST`  
+- **功能**: 將音頻文件轉錄為逐字稿，並保存為 `.json` 格式。
+
+**請求體**:
+
 ```json
 {
-    "message": "轉換成功"
+    "video_id": "12345"
 }
 ```
 
-這樣，您就可以通過 Flask 應用的 API 來自動化下載、提取、處理和轉換視頻為逐字稿的整個過程。
-
-## 在 TWCC 容器中配置並運行專案
-
-### 1. 更新包管理器和安裝必要的工具
-
-首先，確保管理器是最新的，並安裝 `python3-venv` 和 `wget`：
+**範例請求**:
 
 ```bash
-sudo apt-get update
-sudo apt-get install -y python3-venv wget
+curl -X POST http://localhost:5001/api/transcribe \
+-H "Content-Type: application/json" \
+-d '{"video_id": "12345"}'
 ```
 
-### 2. 確保 FFmpeg 安裝正確
+**回應**:
 
-安裝 FFmpeg：
+- 成功:
+
+  ```json
+  {
+      "message": "音頻轉文字成功",
+      "transcript_path": "/path/to/transcripts/12345.json"
+  }
+  ```
+
+- 失敗:
+
+  ```json
+  {
+      "error": "音頻文件不存在"
+  }
+  ```
+
+---
+
+### **3. 任務流程**
+
+#### **下載視頻**
 
 ```bash
-sudo apt-get install -y ffmpeg
+python run.py download
 ```
 
-### 3. 創建虛擬環境
-
-創建並激活 Python 虛擬環境：
+#### **提取音頻**
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate
+python run.py extract
 ```
 
-### 4. 安裝依賴
-
-在虛擬環境中安裝所需的 Python 包：
-
-#### 確保 include-system-site-packages 設置為 false
-
-首先，檢查並確保 venv/pyvenv.cfg 文件中的 include-system-site-packages 設置為 false，以確保虛擬環境不使用系統的 site-packages：
+#### **轉錄逐字稿**
 
 ```bash
-Copy code
-nano venv/pyvenv.cfg
+python run.py transcribe
 ```
 
-確保文件中的 include-system-site-packages 設置為 false：
-
-```plaintext
-include-system-site-packages = false
-```
-
-保存更改並退出編輯器。
+#### **優化逐字稿**
 
 ```bash
-pip install --no-user --upgrade pip
-pip install --no-user -r requirements.txt
+python run.py optimize
 ```
 
-### 5. 運行應用
+---
 
-激活虛擬環境並運行您的應用：
+## 貢獻指南
 
-```bash
-source venv/bin/activate
-python run.py summarize
-```
-
-## 開發與貢獻
-
-鄉民玩 AI 系列基於取之於鄉民，用之於鄉民的精神，全系列進行 [CC0](https://ti-wb.github.io/creativecommon-tw/cc0.html) 「公眾領域貢獻宣告 」，歡迎所有讀者自由使用，也歡迎透過 GitHub 與我們一同協作，或是提交 Issues 給予我們建議。
-
-感謝您使用 Video Script！
+本專案開放源碼，並遵循 [CC0](https://ti-wb.github.io/creativecommon-tw/cc0.html) 公眾領域貢獻宣告。歡迎透過 GitHub 提交 Issue 或 PR 參與貢獻！

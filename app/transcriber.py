@@ -18,7 +18,7 @@ async def transcribe_video(video_id):
 
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.post(f"{BASE_URL}/api/transcribe", json={"url": video_path}) as response:
+            async with session.post(f"{BASE_URL}/api/transcribe", json={"video_id": video_id}) as response:
                 if response.status == 200:
                     transcript = await response.json()
                     with open(transcript_path, 'w') as f:

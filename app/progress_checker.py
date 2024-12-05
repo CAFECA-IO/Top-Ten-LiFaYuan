@@ -4,7 +4,7 @@ from app.audio_extractor import extract_audio
 from app.transcriber import transcribe_video
 from app.summarizer import summarize_transcript
 from app.generator import generate_vocal, generate_video
-from app.news_generator import generate_news
+from app.news_pipeline import generate_news
 from app.utils import setup_logger, load_progress, save_progress
 
 logger = setup_logger('process_checker', 'logs/process_checker.log')

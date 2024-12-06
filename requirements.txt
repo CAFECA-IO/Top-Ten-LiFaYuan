@@ -14,6 +14,7 @@ cffi @ file:///private/var/folders/sy/f16zz6x50xz3113nwtb9bvq00000gp/T/abs_229m2
 charset-normalizer @ file:///croot/charset-normalizer_1721748349566/work
 click==8.1.7
 coloredlogs==15.0.1
+decorator==5.1.1
 diffusers==0.30.1
 einops==0.8.0
 encodec==0.1.1
@@ -30,6 +31,8 @@ huggingface-hub==0.24.6
 humanfriendly==10.0
 HyperPyYAML==1.2.2
 idna @ file:///private/var/folders/c_/qfmhj66j0tn016nkx_th4hxm0000gp/T/abs_2b_jn555_n/croot/idna_1714398852258/work
+imageio==2.36.1
+imageio-ffmpeg==0.5.1
 importlib_metadata==8.4.0
 inflect==7.3.1
 itsdangerous==2.2.0
@@ -41,6 +44,7 @@ mkl-random @ file:///private/var/folders/c_/qfmhj66j0tn016nkx_th4hxm0000gp/T/abs
 mkl-service==2.4.0
 modelscope==1.17.1
 more-itertools==10.4.0
+moviepy==2.1.1
 mpmath @ file:///private/var/folders/c_/qfmhj66j0tn016nkx_th4hxm0000gp/T/abs_8fyoqwupl2/croot/mpmath_1690848275746/work
 multidict==6.1.0
 networkx @ file:///private/var/folders/sy/f16zz6x50xz3113nwtb9bvq00000gp/T/abs_8et6yjganu/croot/networkx_1717597507931/work
@@ -48,12 +52,14 @@ numpy @ file:///private/var/folders/c_/qfmhj66j0tn016nkx_th4hxm0000gp/T/abs_b7ip
 onnxruntime==1.19.0
 packaging==24.1
 pillow @ file:///private/var/folders/sy/f16zz6x50xz3113nwtb9bvq00000gp/T/abs_b6jn17w9_s/croot/pillow_1721059443777/work
+proglog==0.1.10
 propcache==0.2.1
 protobuf==5.27.3
 psutil==6.0.0
 pycparser @ file:///tmp/build/80754af9/pycparser_1636541352034/work
 PySocks @ file:///opt/concourse/worker/volumes/live/112288ac-9cb0-4e73-768b-13baf4ca6419/volume/pysocks_1605305820043/work
 python-dateutil==2.9.0.post0
+python-dotenv==1.0.1
 PyYAML @ file:///private/var/folders/sy/f16zz6x50xz3113nwtb9bvq00000gp/T/abs_37cfd0k_yi/croot/pyyaml_1698096054183/work
 regex==2024.7.24
 requests @ file:///private/var/folders/sy/f16zz6x50xz3113nwtb9bvq00000gp/T/abs_4f6nxsozkv/croot/requests_1721410884113/work

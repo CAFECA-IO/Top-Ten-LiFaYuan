@@ -1,30 +1,39 @@
-# app/news_pipeline.py
-from app.crawler import fetch_meetings, download_video
-from app.transcriber import transcribe_video
-from app.summarizer import summarize_transcript
-from app.generator import generate_vocal, generate_video
-from app.utils import load_progress, save_progress
+import os
+from app.utils import setup_logger, get_path
+from moviepy import concatenate_videoclips, VideoFileClip
 
-def process_news_pipeline(date):
-    """整合流程，完成新聞生成"""
-    # 爬取會議並下載
-    meetings = fetch_meetings(date)
-    for meeting in meetings:
-        for video in meeting.get("videos", []):
-            download_video(video["url"], video["video_id"])
+logger = setup_logger('news_generator', 'logs/news_generator.log')
 
-    # 轉換字幕
-    for meeting in meetings:
-        for video in meeting.get("videos", []):
-            transcribe_video(video["video_id"])
+def generate_news(meeting_id, video_ids):
+    """
+    將同一個 meeting 的所有 video 拼接成一個新聞視頻
+    :param meeting_id: 會議 ID
+    :param video_ids: 該會議中所有 clip 類型影片的 ID 列表
+    :return: 拼接後的新聞視頻路徑
+    """
+    try:
+        video_clips = []
+        for video_id in video_ids:
+            video_path = get_path("shared_data/videos", f"{video_id}.mp4")
+            if not os.path.exists(video_path):
+                logger.error(f"Video file not found: {video_path}")
+                raise FileNotFoundError(f"Video file not found: {video_path}")
+            video_clips.append(VideoFileClip(video_path))
 
-    # 生成摘要
-    for meeting in meetings:
-        for video in meeting.get("videos", []):
-            summarize_transcript(video["video_id"])
+        # 拼接影片
+        logger.info(f"開始拼接影片: {video_ids}")
+        final_clip = concatenate_videoclips(video_clips, method="compose")
+        news_video_path = get_path("shared_data/news", f"news_{meeting_id}.mp4")
+        os.makedirs(os.path.dirname(news_video_path), exist_ok=True)
+        final_clip.write_videofile(news_video_path, codec="libx264", audio_codec="aac")
+        logger.info(f"新聞影片生成成功: {news_video_path}")
 
-    # 配音和生成視頻
-    for meeting in meetings:
-        for video in meeting.get("videos", []):
-            generate_vocal(video["video_id"])
-            generate_video(video["video_id"])
+        # 關閉所有 clip 資源
+        for clip in video_clips:
+            clip.close()
+        final_clip.close()
+
+        return news_video_path
+    except Exception as e:
+        logger.error(f"生成新聞影片失敗: {str(e)}")
+        raise

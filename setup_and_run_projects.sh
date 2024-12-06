@@ -67,10 +67,10 @@ for i in "${!PROJECT_NAMES[@]}"; do
     fi
 
     # # 如果端口已被佔用，跳過該服務
-    # if ! check_port $PORT; then
-    #     echo "Skipping $project due to port $PORT conflict."
-    #     continue
-    # fi
+    if ! check_port $PORT; then
+        echo "Skipping $project due to port $PORT conflict."
+        continue
+    fi
 
     # 配置虛擬環境並安裝依賴
     if [ ! -d "$VENV_PATH" ]; then
@@ -126,11 +126,11 @@ for i in "${!PROJECT_NAMES[@]}"; do
     echo "Checking file permissions for output.log..."
     ls -l "$OUTPUT_LOG"
 
-    while ! check_port $PORT; do
-        echo "Port $PORT is in use. Trying a new port..."
-        terminate_previous_process $PORT
-        PORT=$((PORT+1))
-    done
+    # while ! check_port $PORT; do
+    #     echo "Port $PORT is in use. Trying a new port..."
+    #     terminate_previous_process $PORT
+    #     PORT=$((PORT+1))
+    # done
 
     echo "Starting $project on port $PORT..."
     cd "$PROJECT_PATH"
